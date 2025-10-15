@@ -1,0 +1,181 @@
+<!-- T1-15: 실시간 검색 결과 (HTMX용) -->
+<div class="search-results space-y-3" id="search-results">
+    {% if query and query.strip() %}
+    <div class="text-sm text-gray-600 mb-4">
+        "{{ query }}" 검색 결과
+        {% set total_results = search_results.milestones|length + search_results.todos|length %}
+        ({{ total_results }}개)
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 rounded-md p-3">
+        <p class="text-red-600 text-sm">{{ error }}</p>
+    </div>
+    {% endif %}
+
+    {% if search_results.milestones or search_results.todos %}
+
+        <!-- 마일스톤 결과 -->
+        {% if search_results.milestones %}
+        <div class="space-y-2">
+            <h4 class="text-sm font-medium text-gray-900 flex items-center">
+                <span class="text-blue-500 mr-2">🎯</span>
+                마일스톤 ({{ search_results.milestones|length }}개)
+            </h4>
+            {% for milestone in search_results.milestones %}
+            <div class="bg-white border rounded-lg p-3 hover:shadow-sm transition-shadow">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h5 class="text-sm font-medium text-gray-900 mb-1">
+                            {{ milestone.title }}
+                        </h5>
+                        {% if milestone.description %}
+                        <p class="text-xs text-gray-500 mb-2 line-clamp-2">
+                            {{ milestone.description }}
+                        </p>
+                        {% endif %}
+                        <div class="flex items-center space-x-3 text-xs text-gray-400">
+                            <span>작업: {{ milestone.completed_todos }}/{{ milestone.total_todos }}개</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 ml-4">
+                        <!-- 편집 버튼 -->
+                        <button hx-get="/api/milestones/{{ milestone.id }}/edit"
+                                hx-target="#modal-content"
+                                hx-trigger="click"
+                                class="text-gray-400 hover:text-blue-600 p-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                        <!-- 상세보기 -->
+                        <a href="/milestones/{{ milestone.id }}"
+                           class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded text-xs font-medium">
+                            상세보기
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- TODO 결과 -->
+        {% if search_results.todos %}
+        <div class="space-y-2">
+            <h4 class="text-sm font-medium text-gray-900 flex items-center">
+                <span class="text-green-500 mr-2">📝</span>
+                TODO ({{ search_results.todos|length }}개)
+            </h4>
+            {% for todo in search_results.todos %}
+            <div class="bg-white border rounded-lg p-3 hover:shadow-sm transition-shadow">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start space-x-3 flex-1">
+                        <!-- 완료 체크박스 -->
+                        <input type="checkbox"
+                               {% if todo.is_completed %}checked{% endif %}
+                               hx-put="/api/todos/{{ todo.id }}/complete"
+                               hx-target="closest div"
+                               hx-swap="outerHTML"
+                               class="mt-0.5 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+
+                        <div class="flex-1">
+                            <h5 class="text-sm font-medium text-gray-900 mb-1 {% if todo.is_completed %}line-through text-gray-500{% endif %}">
+                                {{ todo.title }}
+                            </h5>
+                            {% if todo.description %}
+                            <p class="text-xs text-gray-500 mb-2 line-clamp-2">
+                                {{ todo.description }}
+                            </p>
+                            {% endif %}
+                            <div class="flex items-center space-x-3 text-xs text-gray-400">
+                                <span>{{ todo.milestone_title }}</span>
+                                {% if todo.is_completed %}
+                                <span class="text-green-600">✓ 완료</span>
+                                {% else %}
+                                <span class="text-orange-600">진행중</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2 ml-4">
+                        <!-- 편집 버튼 -->
+                        <button hx-get="/api/todos/{{ todo.id }}/edit"
+                                hx-target="#modal-content"
+                                hx-trigger="click"
+                                class="text-gray-400 hover:text-green-600 p-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    {% else %}
+        <!-- 검색 결과 없음 -->
+        <div class="text-center py-8">
+            <div class="text-gray-400 text-4xl mb-3">🔍</div>
+            <p class="text-gray-500 mb-2">
+                "{{ query }}"에 대한 검색 결과가 없습니다.
+            </p>
+            <p class="text-gray-400 text-sm">
+                다른 키워드로 검색해보세요.
+            </p>
+        </div>
+    {% endif %}
+
+    {% else %}
+        <!-- 검색어 입력 안내 -->
+        <div class="text-center py-8">
+            <div class="text-gray-300 text-4xl mb-3">🔍</div>
+            <p class="text-gray-500 mb-2">
+                검색어를 입력하세요
+            </p>
+            <p class="text-gray-400 text-sm">
+                마일스톤과 TODO를 검색할 수 있습니다.
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- HTMX 로딩 인디케이터 스타일 -->
+<style>
+.htmx-request {
+    opacity: 0.5;
+}
+
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator {
+    display: inline;
+}
+
+.htmx-request.htmx-indicator {
+    display: inline;
+}
+
+/* 검색 결과 애니메이션 */
+.search-results > div {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 라인 클램프 */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>

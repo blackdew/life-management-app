@@ -1,0 +1,108 @@
+[project]
+name = "life-management-app"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "blackdew-enuma", email = "blackdew@enuma.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "alembic>=1.13.0",
+    "anthropic>=0.69.0",
+    "fastapi[all]>=0.117.1",
+    "jinja2>=3.1.6",
+    "openai>=2.3.0",
+    "python-dotenv>=1.1.1",
+    "python-multipart>=0.0.20",
+    "pytz>=2025.2",
+    "sqlalchemy>=2.0.43",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[dependency-groups]
+dev = [
+    "beautifulsoup4>=4.13.5",
+    "black>=25.9.0",
+    "httpx>=0.28.1",
+    "isort>=6.0.1",
+    "mypy>=1.18.2",
+    "pillow>=10.0.0",
+    "playwright>=1.55.0",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "pytest-playwright>=0.7.1",
+    "requests>=2.32.5",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  migrations/
+  | .venv/
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-v --tb=short --cov=app --cov-report=html --cov-report=term-missing"
+markers = [
+    "e2e: End-to-end tests using Playwright",
+    "unit: Unit tests for individual components",
+    "integration: Integration tests for API endpoints",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "app/main.py",           # 웹 라우트, E2E에서 커버
+    "app/routers/*",         # API 라우트, API 테스트에서 커버
+    "app/core/database.py",  # 데이터베이스 연결 코드
+    "app/__init__.py",       # 빈 파일들
+    "app/*/__init__.py",     # 빈 파일들
+]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[project.scripts]
+# 통합 데이터베이스 관리 스크립트
+db = "scripts.db:main"

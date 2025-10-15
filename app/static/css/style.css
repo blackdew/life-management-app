@@ -1,0 +1,386 @@
+/*
+ * 커스텀 스타일 - AI와 함께 놀며 사랑을 채우는 삶
+ * Tailwind CSS와 함께 사용하는 추가 스타일
+ */
+
+/* 애니메이션 및 트랜지션 개선 */
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-up {
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* 호버 효과 개선 */
+.hover-lift {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* 카드 스타일 */
+.card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden;
+}
+
+.card-hover {
+    @apply transition-all duration-200 hover:shadow-md hover:border-gray-300;
+}
+
+/* 버튼 스타일 확장 */
+.btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200;
+}
+
+.btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors duration-200;
+}
+
+.btn-success {
+    @apply bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200;
+}
+
+.btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200;
+}
+
+/* 상태 배지 */
+.badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-success {
+    @apply bg-green-100 text-green-800;
+}
+
+.badge-warning {
+    @apply bg-yellow-100 text-yellow-800;
+}
+
+.badge-info {
+    @apply bg-blue-100 text-blue-800;
+}
+
+.badge-danger {
+    @apply bg-red-100 text-red-800;
+}
+
+/* TODO 아이템 스타일 */
+.todo-item {
+    @apply transition-all duration-200;
+}
+
+.todo-item:hover {
+    @apply bg-gray-50 shadow-sm;
+}
+
+.todo-item.completed {
+    @apply opacity-60;
+}
+
+.todo-item.completed .todo-title {
+    @apply line-through text-gray-500;
+}
+
+/* 폼 스타일 */
+.form-input {
+    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500;
+}
+
+.form-textarea {
+    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 resize-vertical;
+}
+
+.form-select {
+    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white;
+}
+
+/* 네비게이션 개선 */
+.nav-link {
+    @apply text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200;
+}
+
+.nav-link.active {
+    @apply text-blue-600 bg-blue-50;
+}
+
+/* 모달 오버레이 */
+.modal-overlay {
+    @apply fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50;
+}
+
+.modal-content {
+    @apply relative top-20 mx-auto p-5 border w-11/12 max-w-md shadow-lg rounded-md bg-white;
+}
+
+/* 간단하고 확실한 모달 시스템 */
+.simple-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.simple-modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.simple-modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* 로딩 스피너 */
+.spinner {
+    @apply animate-spin rounded-full border-4 border-gray-200 border-t-blue-600;
+}
+
+/* 반응형 텍스트 크기 */
+.text-responsive {
+    @apply text-sm sm:text-base md:text-lg;
+}
+
+/* 그라데이션 배경 */
+.gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-secondary {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+/* 포커스 스타일 개선 */
+.focus-ring {
+    @apply focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none;
+}
+
+/* 드래그 앤 드롭 스타일 */
+.drag-over {
+    @apply border-2 border-dashed border-blue-400 bg-blue-50;
+}
+
+/* 스크롤바 스타일링 */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-gray-100 rounded-full;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+}
+
+/* 프린트 스타일 */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .print-only {
+        display: block !important;
+    }
+
+    body {
+        @apply text-black bg-white;
+    }
+}
+
+/* 다크모드 준비 (향후 사용) */
+@media (prefers-color-scheme: dark) {
+    .dark-mode-ready {
+        /* 다크모드 스타일이 필요할 때 여기에 추가 */
+    }
+}
+
+/* 라인 클램프 개선 */
+.line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 접근성 개선 */
+.sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+}
+
+.focus-visible {
+    @apply focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50;
+}
+
+/* 모바일 최적화 */
+@media (max-width: 640px) {
+    .modal-backdrop {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .modal-content {
+        max-width: 100% !important;
+        border-radius: 1rem 1rem 0 0;
+        max-height: 95vh !important;
+        margin: 0 !important;
+        animation: modal-mobile-enter 300ms ease-out;
+    }
+
+    .modal-content.closing {
+        animation: modal-mobile-exit 250ms ease-in;
+    }
+
+    /* 모바일에서 폼 본문 높이 조정 */
+    .modal-content .max-h-\\[60vh\\] {
+        max-height: 70vh !important;
+    }
+
+    /* 카드 모바일 최적화 */
+    .card {
+        margin: 0 -1rem;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+
+    .card:first-child {
+        border-top: none;
+    }
+
+    /* 버튼 터치 친화적 크기 */
+    .btn-primary, .btn-secondary, .btn-success, .btn-danger {
+        min-height: 44px;
+        padding: 12px 16px;
+    }
+
+    /* 폼 인풋 터치 최적화 */
+    .form-input, .form-textarea, .form-select {
+        min-height: 44px;
+        font-size: 16px; /* iOS 줌 방지 */
+    }
+}
+
+/* 모바일 모달 애니메이션 */
+@keyframes modal-mobile-enter {
+    from {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes modal-mobile-exit {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+}
+
+/* 태블릿 최적화 */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .modal-content {
+        max-width: 600px;
+    }
+
+    .card {
+        padding: 1.25rem;
+    }
+}
+
+/* 고해상도 디스플레이 최적화 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .modal-backdrop {
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+}
+
+/* 다크모드 지원 */
+@media (prefers-color-scheme: dark) {
+    .modal-backdrop {
+        background: rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-content {
+        background: #1f2937;
+        color: #f9fafb;
+    }
+}
+
+/* 애니메이션 비활성화 옵션 */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .modal-backdrop, .modal-content {
+        animation: none !important;
+    }
+}

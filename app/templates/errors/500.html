@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}서버 오류 - 500{% endblock %}
+
+{% block header %}
+<div class="mb-8">
+    <div class="text-center">
+        <div class="text-6xl mb-4">⚠️</div>
+        <h2 class="text-3xl font-bold text-gray-900 mb-2">서버 내부 오류</h2>
+        <p class="text-gray-600">일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto text-center">
+    <div class="bg-white shadow rounded-lg p-8">
+        <div class="mb-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-2">문제 해결 방법</h3>
+            <div class="text-left space-y-3 text-sm text-gray-600">
+                <div class="flex items-start space-x-3">
+                    <span class="text-blue-500 font-medium">1.</span>
+                    <span>페이지를 새로고침해보세요</span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="text-blue-500 font-medium">2.</span>
+                    <span>잠시 후 다시 시도해보세요</span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="text-blue-500 font-medium">3.</span>
+                    <span>문제가 지속되면 메인 페이지로 돌아가세요</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <button
+                onclick="window.location.reload()"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2">
+                <span>🔄</span>
+                <span>페이지 새로고침</span>
+            </button>
+
+            <a href="/" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2">
+                <span>🏠</span>
+                <span>홈으로 이동</span>
+            </a>
+        </div>
+
+        <div class="border-t pt-6">
+            <h4 class="text-sm font-medium text-gray-700 mb-3">다른 페이지로 이동</h4>
+            <div class="grid grid-cols-2 gap-2">
+                <a href="/milestones" class="text-blue-600 hover:text-blue-500 text-sm">마일스톤</a>
+                <a href="/todos" class="text-blue-600 hover:text-blue-500 text-sm">TODO 목록</a>
+                <a href="/health" class="text-blue-600 hover:text-blue-500 text-sm">시스템 상태</a>
+                <a href="#" onclick="history.back()" class="text-blue-600 hover:text-blue-500 text-sm">이전 페이지</a>
+            </div>
+        </div>
+
+        <div class="mt-6 p-4 bg-red-50 rounded-md">
+            <p class="text-xs text-red-600 font-medium">오류 정보</p>
+            <p class="text-xs text-red-500 mt-1">
+                오류 코드: 500 | 시간: {{ now().strftime('%Y-%m-%d %H:%M:%S') if now else '' }}
+            </p>
+            {% if detail %}
+            <p class="text-xs text-red-500 mt-1">{{ detail }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 10초 후 자동으로 홈으로 이동 (선택사항)
+// setTimeout(() => {
+//     if (confirm('홈 페이지로 이동하시겠습니까?')) {
+//         window.location.href = '/';
+//     }
+// }, 10000);
+</script>
+{% endblock %}

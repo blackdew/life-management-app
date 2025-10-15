@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}페이지를 찾을 수 없습니다 - 404{% endblock %}
+
+{% block header %}
+<div class="mb-8">
+    <div class="text-center">
+        <div class="text-6xl mb-4">🔍</div>
+        <h2 class="text-3xl font-bold text-gray-900 mb-2">페이지를 찾을 수 없습니다</h2>
+        <p class="text-gray-600">요청하신 페이지가 존재하지 않거나 이동되었을 수 있습니다.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto text-center">
+    <div class="bg-white shadow rounded-lg p-8">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">어떻게 하시겠어요?</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2">
+                <span>🏠</span>
+                <span>홈으로</span>
+            </a>
+
+            <a href="/journeys" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2">
+                <span>🎯</span>
+                <span>여정</span>
+            </a>
+
+            <a href="/todos" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2">
+                <span>📝</span>
+                <span>TODO</span>
+            </a>
+        </div>
+
+        <div class="border-t pt-6">
+            <h4 class="text-sm font-medium text-gray-700 mb-3">자주 찾는 페이지</h4>
+            <div class="space-y-2 text-sm">
+                <a href="/journeys/1" class="block text-blue-600 hover:text-blue-500">M1: 시동 및 루틴 고정</a>
+                <a href="/health" class="block text-blue-600 hover:text-blue-500">시스템 상태 확인</a>
+            </div>
+        </div>
+
+        <div class="mt-6 p-4 bg-gray-50 rounded-md">
+            <p class="text-xs text-gray-500">
+                오류 코드: 404 | 시간: {{ request.url if request else '' }}
+            </p>
+            {% if detail %}
+            <p class="text-xs text-gray-500 mt-1">{{ detail }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

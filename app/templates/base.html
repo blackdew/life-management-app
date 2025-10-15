@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if is_dev %}[DEV] {% endif %}{% block title %}Daily Flow{% endblock %}</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+
+    <!-- 커스텀 스타일 -->
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+
+    <!-- 추가 헤더 내용 -->
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 개발 환경 배너 -->
+    <!-- DEBUG: app_env={{ app_env }}, is_dev={{ is_dev }} -->
+    {% if app_env == "dev" %}
+    <div class="bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-2 px-4 text-center font-semibold shadow-md">
+        🚧 개발 환경 (DEV) - 포트 {{ request.url.port }} | DB: {{ database_url.split('/')[-1] }}
+    </div>
+    {% endif %}
+
+    <!-- 네비게이션 바 -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex-shrink-0">
+                        <h1 class="text-xl font-bold text-gray-900">⚡ Daily Flow</h1>
+                    </a>
+                </div>
+
+                <!-- 검색 및 데스크톱 메뉴 -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <!-- 실시간 검색 -->
+                    <div class="relative">
+                        <input
+                            type="text"
+                            placeholder="검색..."
+                            hx-get="/api/search"
+                            hx-target="#search-dropdown"
+                            hx-trigger="keyup changed delay:300ms, focus"
+                            hx-include="this"
+                            name="q"
+                            class="w-48 px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                            autocomplete="off">
+
+                        <!-- 검색 결과 드롭다운 -->
+                        <div
+                            id="search-dropdown"
+                            class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 hidden max-h-96 overflow-y-auto">
+                        </div>
+                    </div>
+
+                    <a href="/" class="nav-link">
+                        대시보드
+                    </a>
+                    <a href="/journeys" class="nav-link">
+                        여정
+                    </a>
+                    <a href="/todos" class="nav-link">
+                        TODO
+                    </a>
+                </div>
+
+                <!-- 모바일 메뉴 버튼 -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 모바일 메뉴 -->
+        <div id="mobile-menu" class="hidden md:hidden border-t border-gray-200 bg-white">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="/" class="nav-link block">
+                    대시보드
+                </a>
+                <a href="/journeys" class="nav-link block">
+                    여정
+                </a>
+                <a href="/todos" class="nav-link block">
+                    TODO
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 메인 컨테이너 -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- 알림 메시지 -->
+        {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+            <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-2" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- 페이지 헤더 -->
+        {% block header %}{% endblock %}
+
+        <!-- 메인 콘텐츠 -->
+        <div class="px-4 py-6 sm:px-0">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="bg-white border-t mt-12">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <p class="text-center text-sm text-gray-500">
+                © 2024 Daily Flow. 일상의 흐름을 관리하세요 ⚡
+            </p>
+        </div>
+    </footer>
+
+    <!-- 커스텀 스크립트 -->
+    <script src="{{ url_for('static', path='/js/main.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/modal.js') }}"></script>
+
+    <!-- 검색 기능 스크립트 -->
+    <script>
+    // 검색 드롭다운 표시/숨김
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+        if (event.detail.requestConfig.path?.includes('/api/search')) {
+            const dropdown = document.getElementById('search-dropdown');
+            const searchInput = document.querySelector('input[name="q"]');
+
+            if (dropdown && searchInput) {
+                if (searchInput.value.trim().length > 0) {
+                    dropdown.classList.remove('hidden');
+                } else {
+                    dropdown.classList.add('hidden');
+                }
+            }
+        }
+    });
+
+    // 검색 외부 클릭 시 드롭다운 숨김
+    document.addEventListener('click', function(event) {
+        const searchContainer = event.target.closest('.relative');
+        const dropdown = document.getElementById('search-dropdown');
+
+        if (!searchContainer && dropdown) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    // 검색 결과 클릭 시 드롭다운 숨김
+    document.body.addEventListener('click', function(event) {
+        if (event.target.closest('#search-dropdown a, #search-dropdown button')) {
+            const dropdown = document.getElementById('search-dropdown');
+            if (dropdown) {
+                dropdown.classList.add('hidden');
+            }
+        }
+    });
+    </script>
+
+    <!-- 추가 스크립트 -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>

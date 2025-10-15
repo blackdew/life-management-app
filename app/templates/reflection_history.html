@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if is_dev %}[DEV] {% endif %}회고 히스토리 - Daily Flow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <!-- 개발 환경 배너 -->
+    {% if app_env == "dev" %}
+    <div class="bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-2 px-4 text-center font-semibold shadow-md">
+        🚧 개발 환경 (DEV) - 포트 8000 | DB: {{ database_url.split('/')[-1] }}
+    </div>
+    {% endif %}
+
+<div class="min-h-screen bg-gray-50">
+    <!-- 헤더 -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 lg:ml-64 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">📔 회고 히스토리</h1>
+
+                    <!-- 주간 네비게이션 -->
+                    <div class="flex items-center mt-2 space-x-4">
+                        <!-- 이전/다음 주 버튼 -->
+                        <div class="flex items-center space-x-2">
+                            <a href="/reflection-history?week_start={{ prev_monday.strftime('%Y-%m-%d') }}"
+                               class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                               title="이전 주">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+
+                            <div class="text-center">
+                                <div class="text-sm sm:text-base text-gray-900 font-medium">{{ current_week }}</div>
+                                {% if is_current_week %}
+                                <div class="text-xs text-blue-600 font-medium">이번 주</div>
+                                {% endif %}
+                            </div>
+
+                            <a href="/reflection-history?week_start={{ next_monday.strftime('%Y-%m-%d') }}"
+                               class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                               title="다음 주">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </div>
+
+                        <!-- 달력 선택기 -->
+                        <div class="relative">
+                            <button onclick="toggleDatePicker()"
+                                    class="flex items-center px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-calendar-alt mr-2 text-gray-500"></i>
+                                <span class="hidden sm:inline">주 선택</span>
+                            </button>
+
+                            <!-- 달력 드롭다운 -->
+                            <div id="date-picker" class="hidden absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 p-4">
+                                <div class="text-sm font-medium text-gray-900 mb-3">주 선택하기</div>
+                                <input type="week"
+                                       id="week-input"
+                                       value="{{ monday.strftime('%Y-W%U') }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                       onchange="navigateToWeek(this.value)">
+                                <div class="mt-3 flex space-x-2">
+                                    <button onclick="goToCurrentWeek()"
+                                            class="flex-1 px-3 py-2 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                        이번 주로
+                                    </button>
+                                    <button onclick="toggleDatePicker()"
+                                            class="flex-1 px-3 py-2 text-xs bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+                                        취소
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-right">
+                    <a href="/" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
+                        ← 오늘로 돌아가기
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 데스크탑 사이드바 -->
+    <aside class="hidden lg:block fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-40">
+        <div class="p-6">
+            <div class="flex items-center mb-8">
+                <h2 class="text-xl font-bold text-gray-900">⚡ Daily Flow</h2>
+            </div>
+
+            <nav class="space-y-2">
+                <a href="/" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
+                    <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    오늘의 할 일
+                </a>
+                <a href="/reflection-history" class="flex items-center px-4 py-3 text-blue-600 bg-blue-50 rounded-lg">
+                    <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    회고 히스토리
+                </a>
+                <a href="/projects" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
+                    <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path>
+                    </svg>
+                    여정 관리
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- 메인 컨텐츠 -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 lg:ml-64">
+
+        <!-- 주간 요약 -->
+        <div class="mt-6">
+            <div class="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">📊 이번 주 요약</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                    {% set total_week_todos = weekly_stats|sum(attribute='total_todos') %}
+                    {% set completed_week_todos = weekly_stats|sum(attribute='completed_todos') %}
+                    {% set week_completion_rate = (completed_week_todos / total_week_todos * 100) if total_week_todos > 0 else 0 %}
+
+                    <div class="text-center">
+                        <div class="text-2xl sm:text-3xl font-bold text-blue-600">{{ "%.1f"|format(week_completion_rate) }}%</div>
+                        <div class="text-xs sm:text-sm text-gray-500">주간 완료율</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl sm:text-3xl font-bold text-green-600">{{ completed_week_todos }}</div>
+                        <div class="text-xs sm:text-sm text-gray-500">완료한 할일</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl sm:text-3xl font-bold text-gray-600">{{ total_week_todos }}</div>
+                        <div class="text-xs sm:text-sm text-gray-500">전체 할일</div>
+                    </div>
+                    <div class="text-center">
+                        {% if week_averages.avg_satisfaction > 0 %}
+                        <div class="text-2xl sm:text-3xl font-bold text-yellow-600">{{ "%.1f"|format(week_averages.avg_satisfaction) }}</div>
+                        <div class="text-xs sm:text-sm text-gray-500">평균 만족도</div>
+                        {% else %}
+                        <div class="text-2xl sm:text-3xl font-bold text-gray-400">-</div>
+                        <div class="text-xs sm:text-sm text-gray-500">평균 만족도</div>
+                        {% endif %}
+                    </div>
+                    <div class="text-center">
+                        {% if week_averages.avg_energy > 0 %}
+                        <div class="text-2xl sm:text-3xl font-bold text-purple-600">{{ "%.1f"|format(week_averages.avg_energy) }}</div>
+                        <div class="text-xs sm:text-sm text-gray-500">평균 에너지</div>
+                        {% else %}
+                        <div class="text-2xl sm:text-3xl font-bold text-gray-400">-</div>
+                        <div class="text-xs sm:text-sm text-gray-500">평균 에너지</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 일별 진행 상황 (아코디언) -->
+        <div class="mt-6">
+            <div class="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">📅 일별 회고 히스토리</h2>
+
+                <div class="space-y-3">
+                    {% for day_stat in weekly_stats %}
+                    <div class="accordion-item border rounded-lg transition-all duration-200 hover:shadow-md"
+                         data-date="{{ day_stat.date.strftime('%Y-%m-%d') }}">
+                        <!-- 헤더 (클릭 가능) -->
+                        <div class="{% if day_stat.is_today %}bg-blue-50 border-blue-200{% else %}bg-gray-50{% endif %} cursor-pointer p-4 rounded-lg"
+                             onclick="toggleAccordion('{{ day_stat.date.strftime('%Y-%m-%d') }}')">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ day_stat.day_korean }}</div>
+                                        <div class="text-xs text-gray-500">{{ day_stat.date.strftime('%m/%d') }}</div>
+                                    </div>
+
+                                    {% if day_stat.is_today %}
+                                    <div class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">오늘</div>
+                                    {% endif %}
+
+                                    <!-- 회고 상태 아이콘 -->
+                                    {% if day_stat.has_reflection %}
+                                    <div class="flex items-center space-x-1">
+                                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <span class="text-xs text-green-600 font-medium">회고 완료</span>
+                                        <!-- 만족도 표시 -->
+                                        {% if day_stat.satisfaction_score %}
+                                        <div class="text-yellow-500 text-sm ml-2">
+                                            {% for i in range(1, 6) %}
+                                                {% if i <= day_stat.satisfaction_score %}★{% else %}☆{% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <!-- 에너지 표시 -->
+                                        {% if day_stat.energy_level %}
+                                        <div class="text-blue-500 text-sm ml-1">
+                                            {% if day_stat.energy_level >= 4 %}⚡{% elif day_stat.energy_level >= 3 %}🔋{% elif day_stat.energy_level >= 2 %}🔋{% else %}🪫{% endif %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% else %}
+                                    <div class="flex items-center space-x-1">
+                                        <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+                                        <span class="text-xs text-gray-500">회고 미작성</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="flex items-center space-x-4">
+                                    <div class="text-right">
+                                        <div class="text-sm font-medium text-gray-900">
+                                            {{ day_stat.completed_todos }}/{{ day_stat.total_todos }}
+                                        </div>
+                                        <div class="text-xs text-gray-500">할일 완료</div>
+                                    </div>
+
+                                    <div class="w-20">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-xs text-gray-500">완료율</span>
+                                            <span class="text-xs font-medium text-gray-900">{{ "%.0f"|format(day_stat.completion_rate) }}%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                            <div class="{% if day_stat.completion_rate >= 80 %}bg-green-500{% elif day_stat.completion_rate >= 50 %}bg-yellow-500{% else %}bg-red-500{% endif %} h-2 rounded-full transition-all duration-300"
+                                                 style="width: {{ day_stat.completion_rate }}%"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 아코디언 화살표 -->
+                                    <div class="accordion-arrow transition-transform duration-200">
+                                        <i class="fas fa-chevron-down text-gray-400"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 아코디언 내용 (기본 숨김) -->
+                        <div class="accordion-content hidden border-t bg-white p-4"
+                             id="accordion-{{ day_stat.date.strftime('%Y-%m-%d') }}">
+                            <div class="loading-indicator text-center text-gray-500 py-4">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>
+                                데이터 로딩 중...
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 활성 여정 현황 -->
+        {% if journey_data %}
+        <div class="mt-6">
+            <div class="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">🎯 활성 여정</h2>
+
+                <div class="space-y-4">
+                    {% for data in journey_data %}
+                    {% set journey = data.journey %}
+                    {% set actual_progress = data.actual_progress %}
+                    <div class="border rounded-lg p-4">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1">
+                                <h3 class="font-medium text-gray-900">{{ journey.title }}</h3>
+                                {% if journey.description %}
+                                <p class="text-sm text-gray-600 mt-1">{{ journey.description }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="ml-4 text-right">
+                                <div class="text-sm font-medium text-purple-600">{{ data.completed_todos }}/{{ data.total_todos }}</div>
+                                <div class="text-xs text-gray-500">완료/전체</div>
+                            </div>
+                        </div>
+
+                        <div class="text-sm text-gray-600 mt-2">
+                            <span class="font-medium">작업 현황:</span>
+                            <span class="ml-2">
+                                완료 <span class="font-semibold text-green-600">{{ data.completed_todos }}개</span> /
+                                전체 <span class="font-semibold text-gray-800">{{ data.total_todos }}개</span>
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between mt-3">
+                            <span class="px-2 py-1 text-xs font-medium bg-{{ 'green' if journey.status.value == '진행중' else 'gray' }}-100 text-{{ 'green' if journey.status.value == '진행중' else 'gray' }}-700 rounded-full">
+                                {{ journey.status.value }}
+                            </span>
+
+                            {% if journey.end_date %}
+                            <span class="text-xs text-gray-500">
+                                마감: {{ journey.end_date.strftime('%Y-%m-%d') }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 주간 액션 -->
+        <div class="mt-6 mb-20 lg:mb-8">
+            <div class="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">⚡ 빠른 액션</h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <a href="/" class="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg mr-3">
+                            <i class="fas fa-plus text-blue-600"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900">새 할일 추가</div>
+                            <div class="text-sm text-gray-500">오늘 할일 만들기</div>
+                        </div>
+                    </a>
+
+                    <a href="/reflection-history" class="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg mr-3">
+                            <i class="fas fa-book text-purple-600"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900">회고 리스트</div>
+                            <div class="text-sm text-gray-500">전체 회고 보기</div>
+                        </div>
+                    </a>
+
+                    <a href="/projects" class="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg mr-3">
+                            <i class="fas fa-chart-line text-green-600"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900">여정 관리</div>
+                            <div class="text-sm text-gray-500">전체 현황 보기</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 하단 네비게이션 (모바일만) -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex justify-around py-3">
+                <a href="/" class="flex flex-col items-center py-2 px-4 text-gray-400">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="text-xs mt-1">오늘</span>
+                </a>
+                <a href="/reflection-history" class="flex flex-col items-center py-2 px-4 text-blue-600">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span class="text-xs mt-1">회고</span>
+                </a>
+                <a href="/projects" class="flex flex-col items-center py-2 px-4 text-gray-400">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path>
+                    </svg>
+                    <span class="text-xs mt-1">여정</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+</div>
+
+<!-- 회고 상세보기 모달 -->
+<div id="reflection-detail-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div class="flex items-center justify-between p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900" id="modal-title">회고 상세보기</h3>
+                <button onclick="closeReflectionModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[70vh]" id="modal-content">
+                <!-- 모달 내용이 여기에 로드됩니다 -->
+            </div>
+            <div class="flex items-center justify-end space-x-3 p-6 border-t bg-gray-50">
+                <button onclick="closeReflectionModal()"
+                        class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                    닫기
+                </button>
+                <button onclick="showLLMBlogModal()"
+                        class="px-4 py-2 text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
+                    <i class="fas fa-robot mr-2"></i>
+                    AI 블로그 글 생성
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 이미지 확대보기 모달 -->
+<div id="image-modal" class="fixed inset-0 bg-black bg-opacity-75 z-60 hidden" onclick="closeImageModal()">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="relative max-w-4xl max-h-[90vh] w-full">
+            <button onclick="closeImageModal()"
+                    class="absolute top-4 right-4 text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-2 z-10">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <img id="modal-image" src="" alt="" class="max-w-full max-h-full object-contain rounded-lg">
+            <div id="modal-image-title" class="absolute bottom-4 left-4 right-4 text-white bg-black bg-opacity-50 rounded p-2 text-center"></div>
+        </div>
+    </div>
+</div>
+
+<!-- LLM 블로그 글 생성 모달 -->
+<div id="llm-blog-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden">
+            <div class="flex items-center justify-between p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">🤖 AI 블로그 글 생성</h3>
+                <button onclick="closeLLMBlogModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[70vh]">
+                <form id="llm-blog-form" onsubmit="generateLLMBlog(event)">
+                    <!-- AI 모델 선택 -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">AI 모델 선택</label>
+                        <select name="provider" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="openai">OpenAI GPT-4o (블로그 글 품질 우수)</option>
+                            <option value="claude">Claude 3.5 Sonnet (창작 능력 우수)</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">최적화된 모델로 자동 설정됩니다</p>
+                    </div>
+
+
+                    <!-- 이미지 포함 여부 -->
+                    <div class="mb-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="include_images" checked
+                                   class="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm text-gray-700">할일 완료 이미지 포함</span>
+                        </label>
+                    </div>
+
+                    <!-- 추가 프롬프트 (선택사항) -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">추가 요청사항 (선택사항)</label>
+                        <textarea name="additional_prompt" rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  placeholder="예: 유머러스하게 작성해주세요, 이모지를 많이 사용해주세요"></textarea>
+                    </div>
+
+                    <!-- 생성 버튼 -->
+                    <div class="flex space-x-3">
+                        <button type="button" onclick="closeLLMBlogModal()"
+                                class="flex-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                            취소
+                        </button>
+                        <button type="submit"
+                                class="flex-1 px-4 py-2 text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
+                            <i class="fas fa-magic mr-2"></i>
+                            생성
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 블로그 글 결과 표시 모달 -->
+<div id="blog-result-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div class="flex items-center justify-between p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900" id="blog-result-title">🎉 AI 블로그 글 생성 완료</h3>
+                <button onclick="closeBlogResultModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[70vh]" id="blog-result-content">
+                <!-- 생성된 블로그 글이 여기에 표시됩니다 -->
+            </div>
+            <div class="flex items-center justify-between p-6 border-t bg-gray-50">
+                <div class="flex items-center space-x-2 text-sm text-gray-600">
+                    <span id="cache-status"></span>
+                    <span id="generation-time"></span>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="regenerateBlog()"
+                            class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                        <i class="fas fa-redo mr-2"></i>
+                        재생성
+                    </button>
+                    <button onclick="copyBlogToClipboard()"
+                            class="px-4 py-2 text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100">
+                        <i class="fas fa-copy mr-2"></i>
+                        복사
+                    </button>
+                    <button onclick="closeBlogResultModal()"
+                            class="px-4 py-2 text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
+                        완료
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 달력 선택기 토글
+    function toggleDatePicker() {
+        const picker = document.getElementById('date-picker');
+        picker.classList.toggle('hidden');
+    }
+
+    // 주 선택 시 네비게이션
+    function navigateToWeek(weekValue) {
+        // weekValue 형식: "2025-W39"
+        const [year, weekStr] = weekValue.split('-W');
+        const weekNum = parseInt(weekStr);
+
+        // 해당 년도의 첫 번째 월요일 계산
+        const jan1 = new Date(parseInt(year), 0, 1);
+        const firstMonday = new Date(jan1);
+
+        // 1월 1일이 월요일이 아니면 다음 월요일로 이동
+        const dayOfWeek = jan1.getDay();
+        if (dayOfWeek !== 1) { // 월요일이 아니면
+            const daysToAdd = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+            firstMonday.setDate(jan1.getDate() + daysToAdd);
+        }
+
+        // 선택한 주의 월요일 계산
+        const targetMonday = new Date(firstMonday);
+        targetMonday.setDate(firstMonday.getDate() + (weekNum - 1) * 7);
+
+        // YYYY-MM-DD 형식으로 변환
+        const mondayStr = targetMonday.toISOString().split('T')[0];
+
+        // 페이지 이동
+        window.location.href = `/reflection-history?week_start=${mondayStr}`;
+    }
+
+    // 이번 주로 이동
+    function goToCurrentWeek() {
+        window.location.href = '/reflection-history';
+    }
+
+    // 아코디언 토글
+    function toggleAccordion(dateStr) {
+        const accordionContent = document.getElementById(`accordion-${dateStr}`);
+        const accordionItem = document.querySelector(`[data-date="${dateStr}"]`);
+        const arrow = accordionItem.querySelector('.accordion-arrow i');
+
+        if (accordionContent.classList.contains('hidden')) {
+            // 아코디언 열기
+            accordionContent.classList.remove('hidden');
+            arrow.classList.replace('fa-chevron-down', 'fa-chevron-up');
+
+            // 데이터 로드
+            loadAccordionData(dateStr);
+        } else {
+            // 아코디언 닫기
+            accordionContent.classList.add('hidden');
+            arrow.classList.replace('fa-chevron-up', 'fa-chevron-down');
+        }
+    }
+
+    // 아코디언 데이터 로드
+    async function loadAccordionData(dateStr) {
+        const contentDiv = document.getElementById(`accordion-${dateStr}`);
+        const loadingIndicator = contentDiv.querySelector('.loading-indicator');
+
+        try {
+            loadingIndicator.style.display = 'block';
+
+            const response = await fetch(`/api/reflection-day/${dateStr}`);
+            const data = await response.json();
+
+            loadingIndicator.style.display = 'none';
+
+            // 아코디언 내용 렌더링
+            contentDiv.innerHTML = renderAccordionContent(data);
+
+        } catch (error) {
+            console.error('데이터 로딩 중 오류:', error);
+            loadingIndicator.innerHTML = '<div class="text-red-500"><i class="fas fa-exclamation-circle mr-2"></i>데이터 로딩 실패</div>';
+        }
+    }
+
+    // 아코디언 내용 렌더링
+    function renderAccordionContent(data) {
+        let html = '<div class="space-y-4">';
+
+        // 회고 내용
+        if (data.has_reflection) {
+            html += `
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-medium text-gray-900">📝 회고 내용</h4>
+                        <button onclick="showReflectionDetail('${data.date}')"
+                                class="text-sm text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-external-link-alt mr-1"></i>상세보기
+                        </button>
+                    </div>
+                    <div class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">${data.reflection.reflection_text || '회고 내용이 없습니다.'}</div>
+
+                    <div class="flex items-center space-x-4 mt-3 pt-3 border-t border-blue-200">
+                        ${data.reflection.satisfaction_score ? `
+                            <div class="flex items-center">
+                                <span class="text-xs text-gray-600 mr-2">만족도:</span>
+                                <div class="text-yellow-500">
+                                    ${'★'.repeat(data.reflection.satisfaction_score)}${'☆'.repeat(5 - data.reflection.satisfaction_score)}
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${data.reflection.energy_level ? `
+                            <div class="flex items-center">
+                                <span class="text-xs text-gray-600 mr-2">에너지:</span>
+                                <div class="text-blue-500">
+                                    ${data.reflection.energy_level >= 4 ? '⚡' : data.reflection.energy_level >= 3 ? '🔋' : data.reflection.energy_level >= 2 ? '🔋' : '🪫'}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="bg-gray-50 p-4 rounded-lg text-center">
+                    <div class="text-gray-500 mb-2">
+                        <i class="fas fa-edit text-2xl"></i>
+                    </div>
+                    <div class="text-sm text-gray-600">이 날의 회고가 아직 작성되지 않았습니다.</div>
+                </div>
+            `;
+        }
+
+        // 할일 목록
+        if ((data.todos.completed_on_time && data.todos.completed_on_time.length > 0) ||
+            (data.todos.retroactively_completed && data.todos.retroactively_completed.length > 0) ||
+            (data.todos.pending && data.todos.pending.length > 0)) {
+            html += `
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 class="font-medium text-gray-900 mb-3">📋 할일 목록</h4>
+
+                    ${(data.todos.completed_on_time && data.todos.completed_on_time.length > 0) ? `
+                        <div class="mb-4">
+                            <div class="text-sm font-medium text-green-600 mb-2">✅ 당일 완료한 할일 (${data.todos.completed_on_time.length}개)</div>
+                            <div class="space-y-2">
+                                ${data.todos.completed_on_time.map(todo => `
+                                    <div class="flex items-center text-sm text-gray-700 bg-green-50 p-2 rounded">
+                                        <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                        <span class="line-through">${todo.title}</span>
+                                        <span class="ml-auto text-xs text-gray-500">${todo.category}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${(data.todos.retroactively_completed && data.todos.retroactively_completed.length > 0) ? `
+                        <div class="mb-4">
+                            <div class="text-sm font-medium text-orange-600 mb-2">🔄 나중에 완료한 할일 (${data.todos.retroactively_completed.length}개)</div>
+                            <div class="space-y-2">
+                                ${data.todos.retroactively_completed.map(todo => `
+                                    <div class="flex items-center text-sm text-gray-700 bg-orange-50 border border-orange-200 p-2 rounded">
+                                        <i class="fas fa-check-circle text-orange-500 mr-2"></i>
+                                        <span class="line-through opacity-75">${todo.title}</span>
+                                        <span class="ml-auto text-xs text-orange-600">회고 후 완료</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${(data.todos.pending && data.todos.pending.length > 0) ? `
+                        <div>
+                            <div class="text-sm font-medium text-red-600 mb-2">⏳ 미완료 할일 (${data.todos.pending.length}개)</div>
+                            <div class="space-y-2">
+                                ${data.todos.pending.map(todo => `
+                                    <div class="flex items-center text-sm text-gray-700 bg-red-50 p-2 rounded">
+                                        <i class="fas fa-clock text-red-500 mr-2"></i>
+                                        <span>${todo.title}</span>
+                                        <span class="ml-auto text-xs text-gray-500">${todo.category}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    // 회고 상세보기 모달 열기
+    function showReflectionDetail(dateStr) {
+        const modal = document.getElementById('reflection-detail-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalContent = document.getElementById('modal-content');
+
+        modalTitle.textContent = `${dateStr} 회고 상세보기`;
+        modalContent.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin mr-2"></i>로딩 중...</div>';
+
+        // 현재 모달 정보 설정
+        currentModalDate = dateStr;
+
+        modal.classList.remove('hidden');
+
+        // 상세 데이터 로드
+        loadReflectionDetail(dateStr);
+    }
+
+    // 회고 상세 데이터 로드
+    async function loadReflectionDetail(dateStr) {
+        const modalContent = document.getElementById('modal-content');
+
+        try {
+            const response = await fetch(`/api/reflection-day/${dateStr}`);
+            const data = await response.json();
+
+            // 회고 ID 설정 (블로그 내보내기용)
+            currentModalReflectionId = data.reflection.id;
+
+            modalContent.innerHTML = renderReflectionDetail(data);
+
+        } catch (error) {
+            console.error('상세 데이터 로딩 중 오류:', error);
+            modalContent.innerHTML = '<div class="text-center text-red-500 py-8"><i class="fas fa-exclamation-circle mr-2"></i>데이터 로딩 실패</div>';
+        }
+    }
+
+    // 회고 상세 내용 렌더링
+    function renderReflectionDetail(data) {
+        if (!data.has_reflection) {
+            return `
+                <div class="text-center py-8">
+                    <div class="text-gray-400 mb-4">
+                        <i class="fas fa-edit text-6xl"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">회고가 작성되지 않았습니다</h3>
+                    <p class="text-gray-600">이 날의 회고를 아직 작성하지 않았습니다.</p>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="space-y-6">
+                <!-- 회고 텍스트 -->
+                <div>
+                    <h4 class="font-medium text-gray-900 mb-3">📝 회고 내용</h4>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="text-gray-700 leading-relaxed whitespace-pre-wrap">${data.reflection.reflection_text || '회고 내용이 없습니다.'}</div>
+                    </div>
+                </div>
+
+                <!-- 만족도 & 에너지 -->
+                <div class="grid grid-cols-2 gap-4">
+                    ${data.reflection.satisfaction_score ? `
+                        <div class="bg-yellow-50 p-4 rounded-lg">
+                            <h5 class="font-medium text-gray-900 mb-2">만족도</h5>
+                            <div class="text-yellow-500 text-xl">
+                                ${'★'.repeat(data.reflection.satisfaction_score)}${'☆'.repeat(5 - data.reflection.satisfaction_score)}
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">${data.reflection.satisfaction_score}/5점</div>
+                        </div>
+                    ` : '<div class="bg-gray-50 p-4 rounded-lg text-center text-gray-500">만족도 미입력</div>'}
+
+                    ${data.reflection.energy_level ? `
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h5 class="font-medium text-gray-900 mb-2">에너지 레벨</h5>
+                            <div class="text-blue-500 text-2xl">
+                                ${data.reflection.energy_level >= 4 ? '⚡' : data.reflection.energy_level >= 3 ? '🔋' : data.reflection.energy_level >= 2 ? '🔋' : '🪫'}
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">${data.reflection.energy_level}/5점</div>
+                        </div>
+                    ` : '<div class="bg-gray-50 p-4 rounded-lg text-center text-gray-500">에너지 레벨 미입력</div>'}
+                </div>
+
+                <!-- 완료 통계 -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 class="font-medium text-gray-900 mb-3">📊 할일 완료 통계</h4>
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <div class="text-2xl font-bold text-blue-600">${data.reflection.completion_rate.toFixed(1)}%</div>
+                            <div class="text-xs text-gray-500">완료율</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-green-600">${data.reflection.completed_todos}</div>
+                            <div class="text-xs text-gray-500">완료</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-gray-600">${data.reflection.total_todos}</div>
+                            <div class="text-xs text-gray-500">전체</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 할일 상세 목록 -->
+                ${((data.todos.completed_on_time && data.todos.completed_on_time.length > 0) ||
+                   (data.todos.retroactively_completed && data.todos.retroactively_completed.length > 0) ||
+                   (data.todos.pending && data.todos.pending.length > 0)) ? `
+                    <div>
+                        <h4 class="font-medium text-gray-900 mb-3">📋 할일 상세 목록</h4>
+
+                        ${(data.todos.completed_on_time && data.todos.completed_on_time.length > 0) ? `
+                            <div class="mb-4">
+                                <div class="text-sm font-medium text-green-600 mb-2">✅ 당일 완료한 할일</div>
+                                <div class="space-y-2">
+                                    ${data.todos.completed_on_time.map(todo => `
+                                        <div class="flex items-start bg-green-50 p-3 rounded-lg">
+                                            <i class="fas fa-check-circle text-green-500 mr-3 mt-0.5"></i>
+                                            <div class="flex-1">
+                                                <div class="font-medium text-gray-900 line-through">${todo.title}</div>
+                                                <div class="text-xs text-gray-500 mt-1">${todo.category}</div>
+                                                ${todo.completion_reflection ? `
+                                                    <div class="text-sm text-gray-600 mt-2 italic">"${todo.completion_reflection}"</div>
+                                                ` : ''}
+                                                ${todo.completion_image_path ? `
+                                                    <div class="mt-3">
+                                                        <img src="${todo.completion_image_path}"
+                                                             alt="할일 완료 이미지"
+                                                             class="max-w-full h-auto rounded-md border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
+                                                             onclick="showImageModal('${todo.completion_image_path}', '${todo.title} 완료 이미지')"
+                                                             style="max-height: 200px;">
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${(data.todos.retroactively_completed && data.todos.retroactively_completed.length > 0) ? `
+                            <div class="mb-4">
+                                <div class="text-sm font-medium text-orange-600 mb-2">🔄 나중에 완료한 할일</div>
+                                <div class="space-y-2">
+                                    ${data.todos.retroactively_completed.map(todo => `
+                                        <div class="flex items-start bg-orange-50 border border-orange-200 p-3 rounded-lg">
+                                            <i class="fas fa-check-circle text-orange-500 mr-3 mt-0.5"></i>
+                                            <div class="flex-1">
+                                                <div class="font-medium text-gray-900 line-through opacity-75">${todo.title}</div>
+                                                <div class="text-xs text-orange-600 mt-1">${todo.category} • 회고 작성 후 완료됨</div>
+                                                ${todo.completed_at ? `
+                                                    <div class="text-xs text-orange-600 mt-1">완료일: ${new Date(todo.completed_at).toLocaleDateString('ko-KR')}</div>
+                                                ` : ''}
+                                                ${todo.completion_reflection ? `
+                                                    <div class="text-sm text-gray-600 mt-2 italic">"${todo.completion_reflection}"</div>
+                                                ` : ''}
+                                                ${todo.completion_image_path ? `
+                                                    <div class="mt-3">
+                                                        <img src="${todo.completion_image_path}"
+                                                             alt="할일 완료 이미지"
+                                                             class="max-w-full h-auto rounded-md border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
+                                                             onclick="showImageModal('${todo.completion_image_path}', '${todo.title} 완료 이미지')"
+                                                             style="max-height: 200px;">
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${(data.todos.pending && data.todos.pending.length > 0) ? `
+                            <div>
+                                <div class="text-sm font-medium text-red-600 mb-2">⏳ 미완료 할일</div>
+                                <div class="space-y-2">
+                                    ${data.todos.pending.map(todo => `
+                                        <div class="flex items-start bg-red-50 p-3 rounded-lg">
+                                            <i class="fas fa-clock text-red-500 mr-3 mt-0.5"></i>
+                                            <div class="flex-1">
+                                                <div class="font-medium text-gray-900">${todo.title}</div>
+                                                <div class="text-xs text-gray-500 mt-1">${todo.category}</div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    // 모달 닫기
+    function closeReflectionModal() {
+        document.getElementById('reflection-detail-modal').classList.add('hidden');
+    }
+
+    // 현재 모달의 회고 ID와 날짜를 저장할 변수
+    let currentModalReflectionId = null;
+    let currentModalDate = null;
+
+    // LLM 블로그 모달 열기
+    function showLLMBlogModal() {
+        if (!currentModalReflectionId) {
+            alert('회고 정보를 불러올 수 없습니다.');
+            return;
+        }
+
+        // 먼저 기존 블로그 글이 있는지 확인
+        checkExistingBlogContent();
+
+        document.getElementById('llm-blog-modal').classList.remove('hidden');
+    }
+
+    // LLM 블로그 모달 닫기
+    function closeLLMBlogModal() {
+        document.getElementById('llm-blog-modal').classList.add('hidden');
+        // 폼 초기화
+        const form = document.getElementById('llm-blog-form');
+        form.reset();
+        form.removeAttribute('data-regenerate');
+        // 제목 초기화
+        document.querySelector('#llm-blog-modal h3').textContent = '🤖 AI 블로그 글 생성';
+    }
+
+    // 기존 블로그 글 확인
+    async function checkExistingBlogContent() {
+        try {
+            const response = await fetch(`/api/reflections/${currentModalReflectionId}/blog-content`);
+            if (response.ok) {
+                const data = await response.json();
+                // 기존 글이 있으면 바로 결과 모달 표시
+                showBlogResult(data.content, true, data.generated_at);
+                closeLLMBlogModal();
+            }
+        } catch (error) {
+            // 기존 글이 없거나 오류 발생 시 새로 생성하도록 모달 표시
+            console.log('기존 블로그 글이 없습니다. 새로 생성합니다.');
+        }
+    }
+
+    // LLM 블로그 글 생성
+    async function generateLLMBlog(event) {
+        event.preventDefault();
+
+        if (!currentModalReflectionId) {
+            alert('회고 정보를 불러올 수 없습니다.');
+            return;
+        }
+
+        const form = event.target;
+        const formData = new FormData(form);
+
+        // 로딩 표시
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalText = submitButton.innerHTML;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>생성 중...';
+        submitButton.disabled = true;
+
+        try {
+            const requestData = {
+                provider: formData.get('provider'),
+                include_images: formData.get('include_images') ? true : false,
+                additional_prompt: formData.get('additional_prompt') || null
+            };
+
+            // 재생성 모드인지 확인
+            const isRegenerate = form.getAttribute('data-regenerate') === 'true';
+            const endpoint = isRegenerate ? 'regenerate-blog' : 'generate-blog';
+
+            const response = await fetch(`/api/reflections/${currentModalReflectionId}/${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || '블로그 글 생성에 실패했습니다.');
+            }
+
+            const data = await response.json();
+
+            // 성공 시 결과 모달 표시
+            showBlogResult(data.content, data.is_cached, data.generated_at);
+            closeLLMBlogModal();
+
+        } catch (error) {
+            console.error('블로그 글 생성 실패:', error);
+            alert(`블로그 글 생성 실패: ${error.message}`);
+        } finally {
+            // 로딩 상태 해제
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+        }
+    }
+
+    // 블로그 글 결과 표시
+    function showBlogResult(content, isCached, generatedAt) {
+        const modal = document.getElementById('blog-result-modal');
+        const title = document.getElementById('blog-result-title');
+        const contentDiv = document.getElementById('blog-result-content');
+        const cacheStatus = document.getElementById('cache-status');
+        const generationTime = document.getElementById('generation-time');
+
+        // 제목 설정
+        title.textContent = isCached ? '📄 기존 블로그 글' : '🎉 AI 블로그 글 생성 완료';
+
+        // 콘텐츠 설정 (마크다운을 HTML로 변환)
+        contentDiv.innerHTML = `
+            <div class="prose prose-blue max-w-none">
+                <div class="bg-gray-50 p-6 rounded-lg border">
+                    ${content.replace(/\n/g, '<br>')}
+                </div>
+            </div>
+        `;
+
+        // 상태 정보 설정
+        cacheStatus.textContent = isCached ? '💾 캐시된 내용' : '✨ 새로 생성됨';
+        generationTime.textContent = generatedAt ? `생성 시간: ${new Date(generatedAt).toLocaleString('ko-KR')}` : '';
+
+        // 글로벌 변수에 저장 (재생성과 복사를 위해)
+        currentBlogContent = content;
+
+        modal.classList.remove('hidden');
+    }
+
+    // 블로그 결과 모달 닫기
+    function closeBlogResultModal() {
+        document.getElementById('blog-result-modal').classList.add('hidden');
+    }
+
+    // 블로그 글 재생성
+    function regenerateBlog() {
+        closeBlogResultModal();
+        document.getElementById('llm-blog-modal').classList.remove('hidden');
+        // 재생성임을 표시하기 위해 제목 변경
+        document.querySelector('#llm-blog-modal h3').textContent = '🔄 AI 블로그 글 재생성';
+
+        // 재생성 모드 표시
+        document.getElementById('llm-blog-form').setAttribute('data-regenerate', 'true');
+    }
+
+    // 블로그 글 클립보드 복사
+    async function copyBlogToClipboard() {
+        try {
+            await navigator.clipboard.writeText(currentBlogContent);
+
+            // 복사 버튼 피드백
+            const copyButton = document.querySelector('button[onclick="copyBlogToClipboard()"]');
+            const originalText = copyButton.innerHTML;
+            copyButton.innerHTML = '<i class="fas fa-check mr-2"></i>복사됨!';
+            copyButton.classList.remove('text-blue-600', 'bg-blue-50', 'border-blue-200');
+            copyButton.classList.add('text-green-600', 'bg-green-50', 'border-green-200');
+
+            setTimeout(() => {
+                copyButton.innerHTML = originalText;
+                copyButton.classList.remove('text-green-600', 'bg-green-50', 'border-green-200');
+                copyButton.classList.add('text-blue-600', 'bg-blue-50', 'border-blue-200');
+            }, 2000);
+
+        } catch (error) {
+            console.error('클립보드 복사 실패:', error);
+            alert('클립보드 복사에 실패했습니다.');
+        }
+    }
+
+    // 글로벌 변수
+    let currentBlogContent = '';
+
+    // 블로그 글 생성 함수 (레거시 지원)
+    async function exportReflectionToBlog() {
+        if (!currentModalReflectionId) {
+            alert('회고 정보를 불러올 수 없습니다.');
+            return;
+        }
+
+        try {
+            // 마크다운 형식으로 내보내기
+            const response = await fetch(`/api/reflections/${currentModalReflectionId}/export?format=html`);
+            if (!response.ok) {
+                throw new Error('콘텐츠 생성 실패');
+            }
+
+            const data = await response.json();
+
+            // 새 창에서 콘텐츠 표시
+            const newWindow = window.open('', '_blank');
+
+            // 안전하게 HTML 생성
+            newWindow.document.open();
+            newWindow.document.write('<!DOCTYPE html>');
+            newWindow.document.write('<html>');
+            newWindow.document.write('<head>');
+            newWindow.document.write('<title>회고 블로그 글 - ' + currentModalDate + '</title>');
+            newWindow.document.write('<meta charset="UTF-8">');
+            newWindow.document.write('<style>');
+            newWindow.document.write('body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; background: white; }');
+            newWindow.document.write('.content { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }');
+            newWindow.document.write('.content img { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }');
+            newWindow.document.write('.actions { position: fixed; top: 20px; right: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }');
+            newWindow.document.write('button { background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin: 0 4px; }');
+            newWindow.document.write('button:hover { background: #0056b3; }');
+            newWindow.document.write('</style>');
+            newWindow.document.write('</head>');
+            newWindow.document.write('<body>');
+            newWindow.document.write('<div class="actions">');
+            newWindow.document.write('<button onclick="copyToClipboard()">📋 복사</button>');
+            newWindow.document.write('<button onclick="downloadAsFile()">💾 다운로드</button>');
+            newWindow.document.write('<button onclick="window.close()">❌ 닫기</button>');
+            newWindow.document.write('</div>');
+
+            // 콘텐츠를 안전하게 설정
+            const contentElement = newWindow.document.createElement('div');
+            contentElement.className = 'content';
+            contentElement.innerHTML = data.content;
+            newWindow.document.body.appendChild(contentElement);
+
+            // 스크립트 추가
+            const script = newWindow.document.createElement('script');
+            script.textContent =
+                'function copyToClipboard() {' +
+                    'const content = document.querySelector(".content").innerHTML;' +
+                    'navigator.clipboard.writeText(content).then(() => {' +
+                        'alert("클립보드에 복사되었습니다!");' +
+                    '});' +
+                '}' +
+                'function downloadAsFile() {' +
+                    'const content = document.querySelector(".content").innerHTML;' +
+                    'const blob = new Blob([content], { type: "text/html" });' +
+                    'const url = URL.createObjectURL(blob);' +
+                    'const a = document.createElement("a");' +
+                    'a.href = url;' +
+                    'a.download = "reflection_' + currentModalDate + '.html";' +
+                    'document.body.appendChild(a);' +
+                    'a.click();' +
+                    'document.body.removeChild(a);' +
+                    'URL.revokeObjectURL(url);' +
+                '}';
+            newWindow.document.head.appendChild(script);
+
+            newWindow.document.write('</body>');
+            newWindow.document.write('</html>');
+            newWindow.document.close();
+
+        } catch (error) {
+            console.error('블로그 글 생성 실패:', error);
+            alert('블로그 글 생성 중 오류가 발생했습니다.');
+        }
+    }
+
+    // 달력 외부 클릭시 닫기
+    document.addEventListener('click', function(event) {
+        const picker = document.getElementById('date-picker');
+        const button = event.target.closest('button[onclick="toggleDatePicker()"]');
+
+        if (!picker.contains(event.target) && !button) {
+            picker.classList.add('hidden');
+        }
+    });
+
+    // ESC 키로 달력/모달 닫기
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            document.getElementById('date-picker').classList.add('hidden');
+            document.getElementById('reflection-detail-modal').classList.add('hidden');
+        }
+    });
+
+    // 이미지 모달 열기
+    function showImageModal(imageSrc, title) {
+        const modal = document.getElementById('image-modal');
+        const modalImage = document.getElementById('modal-image');
+        const modalTitle = document.getElementById('modal-image-title');
+
+        modalImage.src = imageSrc;
+        modalImage.alt = title;
+        modalTitle.textContent = title;
+
+        modal.classList.remove('hidden');
+
+        // ESC 키로 모달 닫기
+        document.addEventListener('keydown', handleImageModalEscape);
+    }
+
+    // 이미지 모달 닫기
+    function closeImageModal() {
+        const modal = document.getElementById('image-modal');
+        modal.classList.add('hidden');
+
+        // ESC 키 이벤트 리스너 제거
+        document.removeEventListener('keydown', handleImageModalEscape);
+    }
+
+    // ESC 키로 이미지 모달 닫기
+    function handleImageModalEscape(event) {
+        if (event.key === 'Escape') {
+            closeImageModal();
+        }
+    }
+
+    // 키보드 네비게이션 (화살표 키)
+    document.addEventListener('keydown', function(event) {
+        // 입력 필드에 포커스가 있을 때는 무시
+        if (event.target.tagName === 'INPUT') return;
+
+        // 이미지 모달이 열려있을 때는 무시
+        const imageModal = document.getElementById('image-modal');
+        if (!imageModal.classList.contains('hidden')) return;
+
+        if (event.key === 'ArrowLeft') {
+            // 이전 주로 이동
+            window.location.href = `/reflection-history?week_start={{ prev_monday.strftime('%Y-%m-%d') }}`;
+        } else if (event.key === 'ArrowRight') {
+            // 다음 주로 이동
+            window.location.href = `/reflection-history?week_start={{ next_monday.strftime('%Y-%m-%d') }}`;
+        }
+    });
+</script>
+
+</body>
+</html>

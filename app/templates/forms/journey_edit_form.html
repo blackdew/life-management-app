@@ -1,0 +1,97 @@
+<!-- 여정 편집 폼 -->
+<div class="p-6">
+    <!-- 헤더 -->
+    <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-semibold text-gray-900">여정 편집</h3>
+        <button type="button" onclick="hideModal('#edit-journey-modal')" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- 폼 -->
+    <form id="journey-edit-form"
+          hx-post="/api/journeys/{{ journey.id }}/edit"
+          hx-swap="none"
+          hx-trigger="submit"
+          hx-on:htmx:after-request="if(event.detail.xhr.status === 200) { hideModal('#edit-journey-modal'); location.reload(); }"
+          class="space-y-4">
+
+        <!-- 제목 -->
+        <div>
+            <label for="edit-title" class="block text-sm font-medium text-gray-700 mb-1">제목</label>
+            <input type="text" id="edit-title" name="title" required
+                   value="{{ journey.title }}"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="예: M1: 시동 및 루틴 고정">
+        </div>
+
+        <!-- 설명 -->
+        <div>
+            <label for="edit-description" class="block text-sm font-medium text-gray-700 mb-1">설명 (선택사항)</label>
+            <textarea id="edit-description" name="description" rows="3"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="여정 목표를 간단히 설명해주세요">{{ journey.description or '' }}</textarea>
+        </div>
+
+        <!-- 시작일 -->
+        <div>
+            <label for="edit-start-date" class="block text-sm font-medium text-gray-700 mb-1">시작일</label>
+            <input type="date" id="edit-start-date" name="start_date" required
+                   value="{{ journey.start_date.strftime('%Y-%m-%d') if journey.start_date else '' }}"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <!-- 종료일 -->
+        <div>
+            <label for="edit-end-date" class="block text-sm font-medium text-gray-700 mb-1">종료일</label>
+            <input type="date" id="edit-end-date" name="end_date" required
+                   value="{{ journey.end_date.strftime('%Y-%m-%d') if journey.end_date else '' }}"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <!-- 상태 -->
+        <div>
+            <label for="edit-status" class="block text-sm font-medium text-gray-700 mb-1">상태</label>
+            <select id="edit-status" name="status"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                <option value="계획중" {% if journey.status.value == '계획중' %}selected{% endif %}>계획중</option>
+                <option value="진행중" {% if journey.status.value == '진행중' %}selected{% endif %}>진행중</option>
+                <option value="완료" {% if journey.status.value == '완료' %}selected{% endif %}>완료</option>
+                <option value="일시중지" {% if journey.status.value == '일시중지' %}selected{% endif %}>일시중지</option>
+            </select>
+        </div>
+
+        <!-- 진행률 (DEPRECATED) -->
+        <div>
+            <label for="edit-progress" class="block text-sm font-medium text-gray-700 mb-1">
+                진행률 ({{ journey.progress }}%)
+                <span class="text-xs text-orange-600 font-normal">- 참고용만 (실제 진행률은 할일 완료도에 따라 자동 계산됨)</span>
+            </label>
+            <input type="range" id="edit-progress" name="progress"
+                   min="0" max="100" step="1" value="{{ journey.progress }}"
+                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer opacity-60"
+                   oninput="document.getElementById('progress-value').textContent = this.value + '%'">
+            <div class="text-center mt-1">
+                <span id="progress-value" class="text-sm text-gray-500">{{ journey.progress }}%</span>
+                <div class="text-xs text-orange-600 mt-1">
+                    ⚠️ 이 값은 더 이상 실제 진행률에 반영되지 않습니다
+                </div>
+            </div>
+        </div>
+
+        <!-- 버튼 -->
+        <div class="flex items-center justify-end space-x-3 pt-4">
+            <button type="button" onclick="hideModal('#edit-journey-modal')"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                취소
+            </button>
+            <button type="submit"
+                    onclick="console.log('Edit form submit button clicked')"
+                    class="px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
+                수정 완료
+            </button>
+        </div>
+    </form>
+</div>

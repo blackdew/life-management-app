@@ -1,0 +1,59 @@
+{% macro sidebar_navigation(current_page) %}
+<!-- 데스크탑 사이드바 -->
+<aside class="hidden lg:block fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-40">
+    <div class="p-6">
+        <div class="flex items-center mb-8">
+            <h2 class="text-xl font-bold text-gray-900">⚡ Daily Flow</h2>
+        </div>
+
+        <nav class="space-y-2">
+            <a href="/" class="flex items-center px-4 py-3 {{ 'text-blue-600 bg-blue-50' if current_page == 'daily_todos' else 'text-gray-700 hover:bg-gray-50' }} rounded-lg">
+                <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                오늘의 할 일
+            </a>
+            <a href="/reflection-history" class="flex items-center px-4 py-3 {{ 'text-blue-600 bg-blue-50' if current_page in ['reflection_history', 'weekly_planning', 'reflections'] else 'text-gray-700 hover:bg-gray-50' }} rounded-lg">
+                <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                회고 히스토리
+            </a>
+            <a href="/journeys" class="flex items-center px-4 py-3 {{ 'text-blue-600 bg-blue-50' if current_page in ['project_management', 'milestone_detail'] else 'text-gray-700 hover:bg-gray-50' }} rounded-lg">
+                <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path>
+                </svg>
+                여정
+            </a>
+        </nav>
+    </div>
+</aside>
+{% endmacro %}
+
+{% macro mobile_navigation(current_page) %}
+<!-- 하단 네비게이션 (모바일만) -->
+<nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex justify-around py-3">
+            <a href="/" class="flex flex-col items-center py-2 px-4 {{ 'text-blue-600' if current_page == 'daily_todos' else 'text-gray-400' }}">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="text-xs mt-1">오늘</span>
+            </a>
+            <a href="/reflection-history" class="flex flex-col items-center py-2 px-4 {{ 'text-blue-600' if current_page in ['reflection_history', 'weekly_planning', 'reflections'] else 'text-gray-400' }}">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span class="text-xs mt-1">회고</span>
+            </a>
+            <a href="/journeys" class="flex flex-col items-center py-2 px-4 {{ 'text-blue-600' if current_page in ['project_management', 'milestone_detail'] else 'text-gray-400' }}">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path>
+                </svg>
+                <span class="text-xs mt-1">여정</span>
+            </a>
+        </div>
+    </div>
+</nav>
+{% endmacro %}

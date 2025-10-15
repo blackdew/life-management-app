@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if is_dev %}[DEV] {% endif %}여정 관리 - Daily Flow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- 개발 환경 배너 -->
+    {% if app_env == "dev" %}
+    <div class="bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-2 px-4 text-center font-semibold shadow-md">
+        🚧 개발 환경 (DEV) - 포트 8000 | DB: {{ database_url.split('/')[-1] }}
+    </div>
+    {% endif %}
+
+<div class="min-h-screen bg-gray-50">
+    <!-- 헤더 -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 lg:ml-64 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">📋 여정 관리</h1>
+                    <p class="text-sm sm:text-base text-gray-600">여정 진행 상황 및 할일 관리</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-2xl sm:text-3xl lg:text-4xl font-bold text-indigo-600">{{ total_completed_todos }}/{{ total_todos }}</div>
+                    <div class="text-xs sm:text-sm text-gray-500">완료/전체</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨텐츠 -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 lg:ml-64">
+        <!-- 여정 요약 통계 -->
+        <div class="bg-white mt-6 p-4 sm:p-6 lg:p-8 rounded-lg shadow-sm border">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">📊 여정 현황</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl sm:text-3xl lg:text-4xl font-bold text-indigo-600">{{ active_journeys_count }}</div>
+                    <div class="text-xs sm:text-sm text-gray-500">활성 여정</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-600">{{ total_completed_todos }}/{{ total_todos }}</div>
+                    <div class="text-xs sm:text-sm text-gray-500">완료/전체</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl sm:text-3xl lg:text-4xl font-bold text-red-600">{{ pending_todos_count }}</div>
+                    <div class="text-xs sm:text-sm text-gray-500">미완료 할일</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 여정 목록 -->
+        <div class="bg-white mt-6 rounded-lg shadow-sm border">
+            <div class="px-4 sm:px-6 lg:px-8 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-medium text-gray-900">🎯 여정 현황</h2>
+                        <p class="text-sm text-gray-600">진행 중인 여정과 목표들</p>
+                    </div>
+                    <button hx-get="/api/journeys/new"
+                            hx-target="#new-journey-modal .relative"
+                            hx-swap="innerHTML"
+                            hx-on:htmx:before-request="showModal('#new-journey-modal')"
+                            hx-on:click="event.preventDefault()"
+                            type="button"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm">
+                        <i class="fas fa-plus mr-2"></i>새 여정
+                    </button>
+                </div>
+            </div>
+
+            <div class="divide-y divide-gray-200">
+                {% if journey_data %}
+                    {% for data in journey_data %}
+                    {% set journey = data.journey %}
+                    {% set actual_progress = data.actual_progress %}
+                    <div class="p-4 sm:p-6 lg:p-8 hover:bg-gray-50 transition-colors">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-lg font-medium text-gray-900 truncate">
+                                        <a href="/journeys/{{ journey.id }}" class="hover:text-indigo-600">
+                                            {{ journey.title }}
+                                        </a>
+                                    </h3>
+                                    <div class="flex items-center space-x-2 ml-4">
+                                        {% if journey.status == '진행중' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <i class="fas fa-play mr-1"></i>진행중
+                                        </span>
+                                        {% elif journey.status == '계획중' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            <i class="fas fa-clock mr-1"></i>계획중
+                                        </span>
+                                        {% elif journey.status == '완료' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <i class="fas fa-check mr-1"></i>완료
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                {% if journey.description %}
+                                <p class="text-sm text-gray-600 mb-3">{{ journey.description }}</p>
+                                {% endif %}
+
+                                <!-- 작업 현황 -->
+                                <div class="mb-3">
+                                    <div class="text-sm text-gray-600">
+                                        <span class="font-medium">작업 현황:</span>
+                                        <span class="ml-2">
+                                            완료 <span class="font-semibold text-green-600">{{ data.completed_todos }}개</span> /
+                                            전체 <span class="font-semibold text-gray-800">{{ data.total_todos }}개</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- 날짜 정보 -->
+                                <div class="flex items-center text-sm text-gray-500 space-x-4">
+                                    {% if journey.start_date %}
+                                    <span>
+                                        <i class="fas fa-calendar-start mr-1"></i>
+                                        시작: {{ journey.start_date.strftime('%Y.%m.%d') }}
+                                    </span>
+                                    {% endif %}
+                                    {% if journey.end_date %}
+                                    <span>
+                                        <i class="fas fa-calendar-check mr-1"></i>
+                                        종료: {{ journey.end_date.strftime('%Y.%m.%d') }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="ml-6 flex-shrink-0">
+                                <a href="/journeys/{{ journey.id }}"
+                                   class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
+                                    상세보기 →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="p-8 sm:p-12 text-center">
+                    <div class="text-6xl sm:text-8xl mb-6">🎯</div>
+                    <h3 class="text-lg sm:text-xl lg:text-2xl font-medium text-gray-900 mb-3">아직 여정이 없네요!</h3>
+                    <p class="text-gray-500 text-sm sm:text-base mb-6">첫 번째 여정을 만들어보세요.</p>
+                    <button hx-get="/api/journeys/new"
+                            hx-target="#new-journey-modal .relative"
+                            hx-swap="innerHTML"
+                            hx-on:htmx:before-request="showModal('#new-journey-modal')"
+                            hx-on:click="event.preventDefault()"
+                            type="button"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-plus mr-2"></i>첫 여정 만들기
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+
+    <!-- 하단 네비게이션 (모바일만) -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex justify-around py-3">
+                <a href="/" class="flex flex-col items-center py-2 px-3 text-gray-400">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="text-xs mt-1">오늘</span>
+                </a>
+                <a href="/reflection-history" class="flex flex-col items-center py-2 px-3 text-gray-400">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span class="text-xs mt-1">회고</span>
+                </a>
+                <a href="/reflection-history" class="flex flex-col items-center py-2 px-3 text-gray-400">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="text-xs mt-1">회고</span>
+                </a>
+                <a href="/projects" class="flex flex-col items-center py-2 px-3 text-blue-600">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path>
+                    </svg>
+                    <span class="text-xs mt-1">여정</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 데스크탑 사이드바 -->
+    <aside class="hidden lg:block fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-40">
+        <div class="p-6">
+            <div class="flex items-center mb-8">
+                <h2 class="text-xl font-bold text-gray-900">⚡ Daily Flow</h2>
+            </div>
+
+            <nav class="space-y-2">
+                <a href="/" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
+                    <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    오늘의 할 일
+                </a>
+                <a href="/reflection-history" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg">
+                    <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    회고 히스토리
+                </a>
+                <a href="/projects" class="flex items-center px-4 py-3 text-blue-600 bg-blue-50 rounded-lg">
+                    <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path>
+                    </svg>
+                    여정 관리
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- 모달 컨테이너 -->
+    <div id="modal-container"></div>
+
+    <!-- 새 여정 모달 -->
+    <div id="new-journey-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <!-- 모달 내용이 HTMX로 로드됩니다 -->
+        </div>
+    </div>
+</div>
+
+<script>
+// 모달 관련 함수들
+function showModal(modalId) {
+    document.querySelector(modalId).classList.remove('hidden');
+}
+
+function hideModal(modalId) {
+    document.querySelector(modalId).classList.add('hidden');
+}
+
+// ESC 키로 모달 닫기
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        document.querySelectorAll('.fixed.inset-0').forEach(modal => {
+            modal.classList.add('hidden');
+        });
+    }
+});
+
+// 배경 클릭으로 모달 닫기
+document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('bg-opacity-50')) {
+        event.target.classList.add('hidden');
+    }
+});
+
+// HTMX 폼 성공 처리는 modal.js에서 전역적으로 처리됨
+</script>
+</body>
+</html>
