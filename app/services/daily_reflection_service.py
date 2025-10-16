@@ -21,20 +21,28 @@ class DailyReflectionService:
     ) -> DailyReflection:
         """일일 회고 생성"""
 
-        # 해당 날짜의 할 일 통계 계산 (완료된 할일은 완료 날짜 기준, 미완료는 예정 날짜 기준)
+        # 해당 날짜의 할 일 통계 계산
+        # - 완료된 할일: 완료한 날짜 기준
+        # - 미완료 할일: 자동 이월 포함, 명시적 미래 미룸 제외
         from sqlalchemy import and_, or_, func
 
         todos = db.query(DailyTodo).filter(
             or_(
-                # 완료된 할일: 완료한 날짜가 회고 날짜와 같음
+                # 1. 완료된 할일: 완료한 날짜가 회고 날짜와 같음
                 and_(
                     DailyTodo.is_completed == True,
                     func.date(DailyTodo.completed_at) == reflection_date
                 ),
-                # 미완료 할일: 예정된 날짜가 회고 날짜와 같음
+                # 2. 미완료 할일: 생성 날짜가 회고 날짜 이전이고,
+                #    scheduled_date가 회고 날짜 이전 또는 같음 (또는 None)
+                #    -> 자동 이월 포함, 명시적 미래 미룸 제외
                 and_(
                     DailyTodo.is_completed == False,
-                    DailyTodo.scheduled_date == reflection_date
+                    DailyTodo.created_date <= reflection_date,
+                    or_(
+                        DailyTodo.scheduled_date == None,
+                        DailyTodo.scheduled_date <= reflection_date
+                    )
                 )
             )
         ).all()

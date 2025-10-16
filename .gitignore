@@ -229,6 +229,9 @@ logs/
 app/static/dist/
 app/static/build/
 
+# Uploaded files
+app/static/uploads/
+
 # Node modules (if using npm for frontend tools)
 node_modules/
 npm-debug.log*

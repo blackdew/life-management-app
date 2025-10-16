@@ -2,7 +2,7 @@
 DailyReflectionService 유닛 테스트
 """
 import pytest
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.services.daily_reflection_service import DailyReflectionService
@@ -214,3 +214,216 @@ class TestDailyReflectionService:
         # 빈 경우의 기본값들 확인
         assert stats["total_days"] == 0
         assert stats["avg_completion_rate"] == 0.0
+
+    def test_reflection_includes_automatically_carried_over_todos(self, test_db: Session):
+        """자동 이월된 할일(과거 미완료)이 오늘 회고에 포함되어야 함"""
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+
+        # 어제 생성되었지만 완료하지 못한 할일 (자동 이월)
+        overdue_todo = DailyTodo(
+            title="어제 미완료 할일",
+            category=TodoCategory.WORK,
+            created_date=yesterday,
+            scheduled_date=yesterday,  # 어제 예정이었음
+            is_completed=False
+        )
+
+        # 오늘 생성된 할일
+        today_todo = DailyTodo(
+            title="오늘 할일",
+            category=TodoCategory.PERSONAL,
+            created_date=today,
+            scheduled_date=today,
+            is_completed=False
+        )
+
+        test_db.add_all([overdue_todo, today_todo])
+        test_db.commit()
+
+        # When: 오늘 회고 생성
+        reflection = DailyReflectionService.create_reflection(
+            test_db,
+            reflection_date=today,
+            reflection_text="자동 이월 테스트",
+            satisfaction_score=3,
+            energy_level=3
+        )
+
+        # Then: 자동 이월된 할일도 포함되어야 함
+        assert reflection.total_todos == 2  # 어제 미완료 + 오늘 할일
+        assert reflection.completed_todos == 0
+        assert len(reflection.todos_snapshot["incomplete"]) == 2
+
+    def test_reflection_excludes_explicitly_postponed_todos_to_future(self, test_db: Session):
+        """명시적으로 미래로 미룬 할일은 오늘 회고에서 제외되어야 함"""
+        today = date.today()
+        tomorrow = today + timedelta(days=1)
+
+        # 오늘 생성했지만 내일로 미룬 할일
+        postponed_todo = DailyTodo(
+            title="내일로 미룬 할일",
+            category=TodoCategory.WORK,
+            created_date=today,
+            scheduled_date=tomorrow,  # 내일로 미룸
+            postpone_count=1,
+            is_completed=False
+        )
+
+        # 오늘 예정된 일반 할일
+        today_todo = DailyTodo(
+            title="오늘 할일",
+            category=TodoCategory.PERSONAL,
+            created_date=today,
+            scheduled_date=today,
+            is_completed=False
+        )
+
+        test_db.add_all([postponed_todo, today_todo])
+        test_db.commit()
+
+        # When: 오늘 회고 생성
+        reflection = DailyReflectionService.create_reflection(
+            test_db,
+            reflection_date=today,
+            reflection_text="명시적 미룸 제외 테스트",
+            satisfaction_score=4,
+            energy_level=3
+        )
+
+        # Then: 내일로 미룬 할일은 제외되어야 함
+        assert reflection.total_todos == 1  # 오늘 할일만
+        assert len(reflection.todos_snapshot["incomplete"]) == 1
+        assert reflection.todos_snapshot["incomplete"][0]["title"] == "오늘 할일"
+
+    def test_reflection_includes_todos_postponed_from_past_to_today(self, test_db: Session):
+        """과거에서 오늘로 명시적으로 미룬 할일은 오늘 회고에 포함되어야 함"""
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+
+        # 어제 생성되었고 오늘로 미룬 할일
+        postponed_to_today = DailyTodo(
+            title="어제에서 오늘로 미룬 할일",
+            category=TodoCategory.WORK,
+            created_date=yesterday,
+            scheduled_date=today,  # 오늘로 미룸
+            postpone_count=1,
+            is_completed=False
+        )
+
+        # 오늘 생성된 일반 할일
+        today_todo = DailyTodo(
+            title="오늘 생성한 할일",
+            category=TodoCategory.LEARNING,
+            created_date=today,
+            scheduled_date=today,
+            is_completed=True,
+            completed_at=datetime.now()
+        )
+
+        test_db.add_all([postponed_to_today, today_todo])
+        test_db.commit()
+
+        # When: 오늘 회고 생성
+        reflection = DailyReflectionService.create_reflection(
+            test_db,
+            reflection_date=today,
+            reflection_text="과거→오늘 미룸 포함 테스트",
+            satisfaction_score=4,
+            energy_level=4
+        )
+
+        # Then: 오늘로 미룬 할일도 포함되어야 함
+        assert reflection.total_todos == 2  # 오늘로 미룬 것 + 오늘 할일
+        assert reflection.completed_todos == 1
+        assert len(reflection.todos_snapshot["incomplete"]) == 1
+        assert len(reflection.todos_snapshot["completed"]) == 1
+
+    def test_reflection_count_matches_today_todos_display(self, test_db: Session):
+        """회고의 할일 카운트가 실제 오늘의 할일 화면과 일치해야 함"""
+        from app.services.daily_todo_service import DailyTodoService
+
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        tomorrow = today + timedelta(days=1)
+
+        # 시나리오: 복잡한 실제 상황
+        todos = [
+            # 1. 오늘 생성, 오늘 예정 (표시 O, 회고 O)
+            DailyTodo(
+                title="오늘 할일",
+                category=TodoCategory.WORK,
+                created_date=today,
+                scheduled_date=today,
+                is_completed=False
+            ),
+            # 2. 오늘 생성, 오늘 완료 (표시 O, 회고 O)
+            DailyTodo(
+                title="오늘 완료한 할일",
+                category=TodoCategory.LEARNING,
+                created_date=today,
+                scheduled_date=today,
+                is_completed=True,
+                completed_at=datetime.now()
+            ),
+            # 3. 어제 생성, 어제 예정, 미완료 → 자동 이월 (표시 O, 회고 O)
+            DailyTodo(
+                title="어제 미완료 자동 이월",
+                category=TodoCategory.HEALTH,
+                created_date=yesterday,
+                scheduled_date=yesterday,
+                is_completed=False
+            ),
+            # 4. 어제 생성, 오늘로 미룸 (표시 O, 회고 O)
+            DailyTodo(
+                title="어제에서 오늘로 미룬 할일",
+                category=TodoCategory.PERSONAL,
+                created_date=yesterday,
+                scheduled_date=today,
+                postpone_count=1,
+                is_completed=False
+            ),
+            # 5. 오늘 생성, 내일로 미룸 (표시 X, 회고 X)
+            DailyTodo(
+                title="내일로 미룬 할일",
+                category=TodoCategory.WORK,
+                created_date=today,
+                scheduled_date=tomorrow,
+                postpone_count=1,
+                is_completed=False
+            ),
+            # 6. 어제 생성, 어제 완료 (표시 X, 회고 X)
+            DailyTodo(
+                title="어제 완료한 할일",
+                category=TodoCategory.OTHER,
+                created_date=yesterday,
+                scheduled_date=yesterday,
+                is_completed=True,
+                completed_at=datetime.now() - timedelta(days=1)
+            ),
+        ]
+
+        test_db.add_all(todos)
+        test_db.commit()
+
+        # When: 오늘의 할일 화면 조회 & 회고 생성
+        today_todos_display = DailyTodoService.get_today_todos(test_db)
+        reflection = DailyReflectionService.create_reflection(
+            test_db,
+            reflection_date=today,
+            reflection_text="통합 테스트",
+            satisfaction_score=4,
+            energy_level=3
+        )
+
+        # Then: 화면에 표시되는 할일 수 = 회고의 할일 수
+        expected_count = 4  # 1, 2, 3, 4번만 포함
+        assert len(today_todos_display) == expected_count
+        assert reflection.total_todos == expected_count
+
+        # 완료/미완료 개수도 일치해야 함
+        display_completed = len([t for t in today_todos_display if t.is_completed])
+        display_incomplete = len([t for t in today_todos_display if not t.is_completed])
+
+        assert reflection.completed_todos == display_completed
+        assert (reflection.total_todos - reflection.completed_todos) == display_incomplete

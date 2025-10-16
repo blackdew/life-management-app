@@ -440,7 +440,7 @@ async def reflection_history_page(
             # 해당 날짜의 회고 데이터 확인
             reflection = db.query(DailyReflection).filter(DailyReflection.reflection_date == day).first()
 
-            # 해당 날짜의 할일 목록 (아코디언에서 표시용)
+            # 해당 날짜의 할일 목록 (아코디언에서 표시용) - created_date 기준
             day_todos = db.query(DailyTodo).filter(DailyTodo.created_date == day).all()
 
             if reflection:
@@ -456,10 +456,18 @@ async def reflection_history_page(
                 if reflection.energy_level:
                     total_energy += reflection.energy_level
             else:
-                # 회고가 없으면 실시간 계산 (오늘이거나 회고 작성 전)
-                completed = len([t for t in day_todos if t.is_completed])
-                total = len(day_todos)
-                completion_rate = (completed / total * 100) if total > 0 else 0
+                # 회고가 없으면 실시간 계산
+                # 오늘인 경우 DailyTodoService의 로직 사용 (자동 이월 포함)
+                if day == today:
+                    summary = DailyTodoService.get_today_summary(db)
+                    total = summary["total"]
+                    completed = summary["completed"]
+                    completion_rate = summary["completion_rate"]
+                else:
+                    # 과거 날짜는 created_date 기준으로만 계산 (변경 없음)
+                    completed = len([t for t in day_todos if t.is_completed])
+                    total = len(day_todos)
+                    completion_rate = (completed / total * 100) if total > 0 else 0
 
             weekly_stats.append({
                 "date": day,
