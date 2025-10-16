@@ -13,7 +13,6 @@ from app.core.database import Base, get_db
 from app.models.todo import DailyTodo, TodoCategory, Todo
 from app.models.journey import Journey, JourneyStatus
 from app.models.daily_reflection import DailyReflection
-from app.models.record import DailyRecord
 from app.models.daily_memo import DailyMemo
 
 # 모든 모델을 import 해야 Base.metadata.create_all()에서 테이블이 생성됨
