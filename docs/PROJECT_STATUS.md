@@ -1,6 +1,6 @@
 # Daily Flow - 프로젝트 현재 상태 문서
 
-> **최종 업데이트:** 2025년 10월 17일
+> **최종 업데이트:** 2025년 10월 22일
 > **버전:** 1.0.0
 > **상태:** 운영 중 (개발/메인 환경 분리)
 
@@ -280,6 +280,7 @@ class Todo(Base):
 - `DELETE /api/daily/todos/{id}` - 할일 삭제
 - `PATCH /api/daily/todos/{id}/toggle` - 완료/미완료 토글
 - `PATCH /api/daily/todos/{id}/complete` - 회고와 함께 완료
+- `PATCH /api/daily/todos/{id}/reflection` - 완료 회고 수정 (이미지 포함)
 - `PATCH /api/daily/todos/{id}/reschedule` - 미루기 (일정 재조정)
 - `GET /api/daily/todos/{id}/postpone-summary` - 미루기 요약 정보
 
@@ -578,11 +579,13 @@ python scripts/db.py --env main restore <backup_file>
 - [x] 일상 할일 관리 (DailyTodo)
 - [x] 빠른 할일 추가
 - [x] 할일 완료 시 회고 작성 (이미지 포함)
+- [x] **작업완료 회고 수정 기능** (NEW - Issue #1)
+- [x] **하루 마감 회고 수정 기능** (NEW - Issue #2)
 - [x] 미루기 기능 (사유 포함)
 - [x] 여정 연결 및 관리
 - [x] 일일 메모 시스템
 - [x] 일일 회고 시스템
-- [x] **과거 날짜 회고 작성 기능** (NEW)
+- [x] 과거 날짜 회고 작성 기능
 - [x] LLM 블로그 글 생성 (OpenAI, Claude)
 - [x] 주간 회고 히스토리
 - [x] 실시간 검색
@@ -641,6 +644,18 @@ python scripts/db.py --env main restore <backup_file>
 ---
 
 ## 📝 최근 주요 변경사항
+
+### 2025-10-22: 하루 마감 회고 수정 기능 구현 (Issue #2)
+- 오늘의 할 일 페이지에서 "하루 마감" 모달 열 때 기존 회고 자동 로드
+- 회고 텍스트, 만족도, 에너지 레벨 자동 채우기
+- 수정 모드와 신규 작성 모드 UI 구분
+- 백엔드 변경 없이 프론트엔드만 개선 (JavaScript 40줄 추가)
+
+### 2025-10-22: 작업완료 회고 수정 기능 구현 (Issue #1)
+- 완료된 할 일의 회고 내용 수정 기능 추가
+- 회고 이미지 추가/변경/삭제 지원
+- API 엔드포인트 추가: `PATCH /api/daily/todos/{id}/reflection`
+- E2E 테스트 수정 (Playwright strict mode violation 해결)
 
 ### 2025-10-17: 과거 날짜 회고 작성 기능 추가
 - 회고 히스토리 페이지에서 과거 날짜 회고 작성 가능
