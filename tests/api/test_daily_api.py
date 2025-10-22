@@ -200,6 +200,88 @@ class TestDailyTodoAPI:
         assert data["is_completed"] is True
         assert data["completion_reflection"] == "오늘 이 일을 하면서 많이 배웠다."
 
+    def test_update_completion_reflection_success(self, client: TestClient, test_db):
+        """완료 회고 수정 성공 테스트"""
+        # Given: 완료된 할일 (회고 포함)
+        todo = DailyTodo(
+            title="완료된 할일",
+            scheduled_date=date.today(),
+            is_completed=True,
+            completed_at=datetime.now(),
+            completion_reflection="원래 회고 내용"
+        )
+        test_db.add(todo)
+        test_db.commit()
+        test_db.refresh(todo)
+
+        # When: 회고만 수정
+        update_data = {"reflection": "수정된 회고 내용입니다!"}
+        response = client.patch(f"/api/daily/todos/{todo.id}/reflection", data=update_data)
+
+        # Then: 회고만 업데이트됨
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == todo.id
+        assert data["completion_reflection"] == "수정된 회고 내용입니다!"
+        assert data["is_completed"] is True  # 여전히 완료 상태
+
+        # 데이터베이스 확인
+        test_db.refresh(todo)
+        assert todo.completion_reflection == "수정된 회고 내용입니다!"
+
+    def test_update_completion_reflection_incomplete_todo(self, client: TestClient, test_db):
+        """미완료 할일의 회고 수정 실패 테스트"""
+        # Given: 미완료 할일
+        todo = DailyTodo(
+            title="미완료 할일",
+            scheduled_date=date.today(),
+            is_completed=False
+        )
+        test_db.add(todo)
+        test_db.commit()
+        test_db.refresh(todo)
+
+        # When: 회고 수정 시도
+        update_data = {"reflection": "미완료 할일 회고 수정 시도"}
+        response = client.patch(f"/api/daily/todos/{todo.id}/reflection", data=update_data)
+
+        # Then: 실패 (400 Bad Request)
+        assert response.status_code == 400
+        assert "완료된 할 일만" in response.json()["detail"]
+
+    def test_update_completion_reflection_not_found(self, client: TestClient, test_db):
+        """존재하지 않는 할일의 회고 수정 실패 테스트"""
+        update_data = {"reflection": "존재하지 않는 할일"}
+        response = client.patch("/api/daily/todos/999/reflection", data=update_data)
+        assert response.status_code == 404
+
+    def test_update_completion_reflection_empty(self, client: TestClient, test_db):
+        """회고를 빈 값으로 수정 (삭제) 테스트"""
+        # Given: 완료된 할일 (회고 포함)
+        todo = DailyTodo(
+            title="완료된 할일",
+            scheduled_date=date.today(),
+            is_completed=True,
+            completed_at=datetime.now(),
+            completion_reflection="삭제할 회고"
+        )
+        test_db.add(todo)
+        test_db.commit()
+        test_db.refresh(todo)
+
+        # When: 빈 회고로 수정
+        update_data = {"reflection": ""}
+        response = client.patch(f"/api/daily/todos/{todo.id}/reflection", data=update_data)
+
+        # Then: 회고가 None으로 설정됨
+        assert response.status_code == 200
+        data = response.json()
+        assert data["completion_reflection"] is None
+
+        # 데이터베이스 확인
+        test_db.refresh(todo)
+        assert todo.completion_reflection is None
+
     def test_delete_todo_success(self, client: TestClient, test_db):
         """할일 삭제 성공 테스트"""
         todo = DailyTodo(

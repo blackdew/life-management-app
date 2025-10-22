@@ -77,7 +77,35 @@ reflection=오늘은 더 의식적으로 선택하려고 노력했고, 특히 �
 }
 ```
 
-### **5. 할 일 미루기 (일정 재조정)**
+### **5. 완료 회고 수정** ⭐ NEW
+```http
+PATCH /api/daily/todos/{todo_id}/reflection
+Content-Type: multipart/form-data
+
+reflection=수정된 회고 내용입니다. 처음엔 어려웠지만 점점 익숙해지는 중입니다.
+reflection_image=[이미지 파일] (선택사항)
+```
+
+**응답 예시:**
+```json
+{
+  "id": 6,
+  "title": "아침 메타인지 체크 및 오늘 목표 설정",
+  "is_completed": true,
+  "completion_reflection": "수정된 회고 내용입니다. 처음엔 어려웠지만 점점 익숙해지는 중입니다.",
+  "completion_image_path": "/static/uploads/reflections/abc123.jpg",
+  "completed_at": "2025-09-28T14:36:07.970666"
+}
+```
+
+**특징:**
+- 완료된 할 일의 회고만 수정 가능
+- 회고 텍스트와 이미지 모두 수정 가능
+- 빈 문자열로 회고 삭제 가능
+- 미완료 할 일은 400 에러 반환
+- 존재하지 않는 할 일은 404 에러 반환
+
+### **6. 할 일 미루기 (일정 재조정)**
 ```http
 PATCH /api/daily/todos/{todo_id}/reschedule
 Content-Type: application/x-www-form-urlencoded
@@ -95,7 +123,7 @@ new_date=2024-09-29
 }
 ```
 
-### **6. 할 일 수정**
+### **7. 할 일 수정**
 ```http
 PUT /api/daily/todos/{todo_id}
 Content-Type: application/x-www-form-urlencoded
@@ -118,7 +146,7 @@ estimated_minutes=90
 }
 ```
 
-### **7. 할 일 삭제**
+### **8. 할 일 삭제**
 ```http
 DELETE /api/daily/todos/{todo_id}
 ```

@@ -258,9 +258,22 @@
                                     </div>
 
                                     {% if todo.completion_reflection or todo.completion_image_path %}
-                                    <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                                    <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded-md relative">
+                                        <!-- 회고 수정 버튼 -->
+                                        <button
+                                            class="edit-reflection absolute top-2 right-2 p-1.5 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-md transition-colors"
+                                            data-todo-id="{{ todo.id }}"
+                                            data-reflection="{{ (todo.completion_reflection or '')|e }}"
+                                            data-image-path="{{ (todo.completion_image_path or '')|e }}"
+                                            title="회고 수정"
+                                            aria-label="회고 수정"
+                                        >
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+                                            </svg>
+                                        </button>
                                         {% if todo.completion_reflection %}
-                                        <p class="text-xs sm:text-sm text-green-700 whitespace-pre-wrap"><span class="font-medium">회고:</span>{{- todo.completion_reflection.replace('\r\n', '\n').replace('\r', '\n').lstrip() -}}</p>
+                                        <p class="text-xs sm:text-sm text-green-700 whitespace-pre-wrap pr-8"><span class="font-medium">회고:</span>{{- todo.completion_reflection.replace('\r\n', '\n').replace('\r', '\n').lstrip() -}}</p>
                                         {% endif %}
                                         {% if todo.completion_image_path %}
                                         <div class="mt-2">
@@ -453,6 +466,73 @@
                 </button>
                 <button
                     id="cancel-reflection"
+                    class="px-6 py-3 border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 text-sm sm:text-base"
+                >
+                    취소
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 회고 수정 모달 -->
+<div id="edit-reflection-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg p-6 w-full max-w-sm sm:max-w-md lg:max-w-lg">
+            <h3 class="text-lg sm:text-xl font-medium text-gray-900 mb-4">완료 회고 수정</h3>
+            <p class="text-sm sm:text-base text-gray-600 mb-6">
+                작성한 회고를 수정하거나 삭제할 수 있습니다.
+            </p>
+            <textarea
+                id="edit-reflection-text"
+                placeholder="회고를 입력하세요..."
+                class="w-full px-4 py-3 border border-gray-300 rounded-md text-sm sm:text-base resize-none"
+                rows="4"
+            ></textarea>
+
+            <!-- 이미지 업로드 섹션 -->
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    📷 이미지 추가 (선택사항)
+                </label>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                    <input
+                        type="file"
+                        id="edit-reflection-image"
+                        accept="image/*"
+                        class="hidden"
+                        onchange="handleEditImagePreview(this)"
+                    />
+                    <label for="edit-reflection-image" class="cursor-pointer">
+                        <div id="edit-image-upload-area">
+                            <i class="fas fa-cloud-upload-alt text-2xl text-gray-400 mb-2"></i>
+                            <p class="text-sm text-gray-600">클릭하여 이미지 선택</p>
+                            <p class="text-xs text-gray-400 mt-1">JPG, PNG, GIF, WebP (최대 10MB)</p>
+                        </div>
+                        <div id="edit-image-preview" class="hidden">
+                            <img id="edit-preview-img" class="max-w-full max-h-32 mx-auto rounded" />
+                            <p class="text-xs text-gray-500 mt-2" id="edit-image-name"></p>
+                        </div>
+                    </label>
+                    <button
+                        type="button"
+                        id="edit-remove-image"
+                        class="hidden mt-2 text-xs text-red-600 hover:text-red-800"
+                        onclick="removeEditImagePreview()"
+                    >
+                        이미지 제거
+                    </button>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3 mt-6">
+                <button
+                    id="update-reflection"
+                    class="flex-1 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm sm:text-base font-medium"
+                >
+                    수정 완료
+                </button>
+                <button
+                    id="cancel-edit-reflection"
                     class="px-6 py-3 border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 text-sm sm:text-base"
                 >
                     취소
@@ -1490,6 +1570,135 @@ function removeImagePreview() {
     document.getElementById('preview-img').src = '';
     document.getElementById('image-name').textContent = '';
 }
+
+// === 회고 수정 관련 함수 ===
+
+// 회고 수정 이미지 미리보기 처리
+function handleEditImagePreview(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // 파일 크기 체크 (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        alert('이미지 파일 크기는 10MB 이하여야 합니다.');
+        input.value = '';
+        return;
+    }
+
+    // 파일 타입 체크
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+        alert('지원하지 않는 이미지 형식입니다. (JPG, PNG, GIF, WebP만 지원)');
+        input.value = '';
+        return;
+    }
+
+    // 미리보기 표시
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('edit-image-upload-area').classList.add('hidden');
+        document.getElementById('edit-image-preview').classList.remove('hidden');
+        document.getElementById('edit-remove-image').classList.remove('hidden');
+
+        document.getElementById('edit-preview-img').src = e.target.result;
+        document.getElementById('edit-image-name').textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+}
+
+// 회고 수정 이미지 미리보기 제거
+function removeEditImagePreview() {
+    document.getElementById('edit-reflection-image').value = '';
+    document.getElementById('edit-image-upload-area').classList.remove('hidden');
+    document.getElementById('edit-image-preview').classList.add('hidden');
+    document.getElementById('edit-remove-image').classList.add('hidden');
+    document.getElementById('edit-preview-img').src = '';
+    document.getElementById('edit-image-name').textContent = '';
+}
+
+// 회고 수정 모달 열기
+let currentEditTodoId = null;
+
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.edit-reflection')) {
+        const button = e.target.closest('.edit-reflection');
+        currentEditTodoId = button.dataset.todoId;
+        const reflection = button.dataset.reflection;
+        const imagePath = button.dataset.imagePath;
+
+        // 모달 열기
+        document.getElementById('edit-reflection-modal').classList.remove('hidden');
+
+        // 기존 회고 내용 채우기
+        document.getElementById('edit-reflection-text').value = reflection || '';
+
+        // 기존 이미지 표시 (있는 경우)
+        if (imagePath) {
+            document.getElementById('edit-image-upload-area').classList.add('hidden');
+            document.getElementById('edit-image-preview').classList.remove('hidden');
+            document.getElementById('edit-remove-image').classList.remove('hidden');
+            document.getElementById('edit-preview-img').src = imagePath;
+            document.getElementById('edit-image-name').textContent = '기존 이미지';
+        } else {
+            // 이미지 없으면 초기화
+            removeEditImagePreview();
+        }
+    }
+});
+
+// 회고 수정 완료 버튼
+document.getElementById('update-reflection').addEventListener('click', async () => {
+    if (!currentEditTodoId) return;
+
+    const reflection = document.getElementById('edit-reflection-text').value.trim();
+    const imageFile = document.getElementById('edit-reflection-image').files[0];
+
+    try {
+        const formData = new FormData();
+        formData.append('reflection', reflection);
+
+        if (imageFile) {
+            formData.append('reflection_image', imageFile);
+        }
+
+        const response = await fetch(`/api/daily/todos/${currentEditTodoId}/reflection`, {
+            method: 'PATCH',
+            body: formData
+        });
+
+        if (response.ok) {
+            // 모달 닫기
+            document.getElementById('edit-reflection-modal').classList.add('hidden');
+
+            // 페이지 새로고침하여 변경사항 반영
+            location.reload();
+        } else {
+            const error = await response.json();
+            alert(error.detail || '회고 수정에 실패했습니다.');
+        }
+    } catch (error) {
+        console.error('Error updating reflection:', error);
+        alert('회고 수정 중 오류가 발생했습니다.');
+    }
+});
+
+// 회고 수정 취소 버튼
+document.getElementById('cancel-edit-reflection').addEventListener('click', () => {
+    document.getElementById('edit-reflection-modal').classList.add('hidden');
+    currentEditTodoId = null;
+    removeEditImagePreview();
+});
+
+// 모달 배경 클릭 시 닫기
+document.addEventListener('click', (e) => {
+    if (e.target.id === 'edit-reflection-modal') {
+        document.getElementById('edit-reflection-modal').classList.add('hidden');
+        currentEditTodoId = null;
+        removeEditImagePreview();
+    }
+});
+
+// === 회고 수정 관련 함수 끝 ===
 
 // 이미지 모달 표시
 function showImageModal(imagePath) {

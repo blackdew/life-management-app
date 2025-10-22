@@ -248,6 +248,76 @@ async def complete_todo_with_reflection(
         raise HTTPException(status_code=500, detail=f"할 일 완료 처리 실패: {str(e)}")
 
 
+@router.patch("/todos/{todo_id}/reflection")
+async def update_completion_reflection(
+    todo_id: int,
+    reflection: Optional[str] = Form(None),
+    reflection_image: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+):
+    """완료 회고 수정 (이미지 포함)"""
+    try:
+        # 할 일 조회
+        todo = db.query(DailyTodo).filter(DailyTodo.id == todo_id).first()
+        if not todo:
+            raise HTTPException(status_code=404, detail="할 일을 찾을 수 없습니다")
+
+        # 완료된 할 일만 회고 수정 가능
+        if not todo.is_completed:
+            raise HTTPException(status_code=400, detail="완료된 할 일만 회고를 수정할 수 있습니다")
+
+        # 이미지 업로드 처리
+        image_path = None
+        if reflection_image and reflection_image.filename:
+            # 파일 확장자 검증
+            allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+            file_extension = Path(reflection_image.filename).suffix.lower()
+
+            if file_extension not in allowed_extensions:
+                raise HTTPException(status_code=400, detail="지원하지 않는 이미지 형식입니다. (jpg, png, gif, webp만 지원)")
+
+            # 기존 이미지 삭제 (있는 경우)
+            if todo.completion_image_path:
+                old_image_path = Path(f"app{todo.completion_image_path}")
+                if old_image_path.exists():
+                    old_image_path.unlink()
+
+            # 고유 파일명 생성
+            unique_filename = f"{uuid.uuid4()}{file_extension}"
+            upload_dir = Path("app/static/uploads/reflections")
+            upload_dir.mkdir(parents=True, exist_ok=True)
+
+            # 파일 저장
+            file_path = upload_dir / unique_filename
+            with open(file_path, "wb") as buffer:
+                content = await reflection_image.read()
+                buffer.write(content)
+
+            # 웹에서 접근 가능한 경로로 저장
+            image_path = f"/static/uploads/reflections/{unique_filename}"
+
+        # 회고 업데이트
+        todo.completion_reflection = reflection if reflection else None
+        if image_path:
+            todo.completion_image_path = image_path
+
+        db.commit()
+        db.refresh(todo)
+
+        return {
+            "id": todo.id,
+            "title": todo.title,
+            "is_completed": todo.is_completed,
+            "completion_reflection": todo.completion_reflection,
+            "completion_image_path": todo.completion_image_path,
+            "completed_at": todo.completed_at.isoformat() if todo.completed_at else None,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"회고 수정 실패: {str(e)}")
+
+
 @router.patch("/todos/{todo_id}/reschedule")
 async def reschedule_todo(
     todo_id: int,
