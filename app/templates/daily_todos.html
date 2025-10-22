@@ -664,7 +664,7 @@
     <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg sm:text-xl font-medium text-gray-900">📔 오늘 하루 회고</h3>
+                <h3 id="daily-reflection-title" class="text-lg sm:text-xl font-medium text-gray-900">📔 오늘 하루 회고</h3>
                 <button id="close-daily-reflection" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1398,6 +1398,44 @@ async function loadReflectionData() {
         // 전역 변수에 템플릿 저장
         window.reflectionTemplate = data.reflection_template;
 
+        // 오늘 날짜의 기존 회고 조회
+        const today = new Date().toISOString().split('T')[0];
+        try {
+            const reflectionResponse = await fetch(`/api/reflections/date/${today}`);
+            if (reflectionResponse.ok) {
+                const reflectionData = await reflectionResponse.json();
+
+                // 기존 회고가 있으면 폼에 채우기
+                if (reflectionData.id) {
+                    document.getElementById('daily-reflection-text').value = reflectionData.reflection_text || '';
+                    document.getElementById('satisfaction-score').value = reflectionData.satisfaction_score || '';
+                    document.getElementById('energy-level').value = reflectionData.energy_level || '';
+
+                    // 수정 모드 표시를 위한 플래그 저장
+                    window.isEditingReflection = true;
+
+                    // UI 업데이트: 수정 모드 표시
+                    document.getElementById('daily-reflection-title').textContent = '📔 오늘 하루 회고 (수정)';
+                    document.getElementById('save-daily-reflection').textContent = '💾 회고 업데이트';
+                } else {
+                    // 새 작성 모드
+                    window.isEditingReflection = false;
+
+                    // UI 업데이트: 새 작성 모드 표시
+                    document.getElementById('daily-reflection-title').textContent = '📔 오늘 하루 회고';
+                    document.getElementById('save-daily-reflection').textContent = '💾 회고 저장하기';
+                }
+            }
+        } catch (reflectionError) {
+            // 기존 회고 조회 실패는 무시 (새 작성으로 진행)
+            console.log('기존 회고 없음 또는 조회 실패:', reflectionError);
+            window.isEditingReflection = false;
+
+            // UI 업데이트: 새 작성 모드 표시
+            document.getElementById('daily-reflection-title').textContent = '📔 오늘 하루 회고';
+            document.getElementById('save-daily-reflection').textContent = '💾 회고 저장하기';
+        }
+
     } catch (error) {
         console.error('회고 데이터 로드 실패:', error);
         // 에러 시 기본값 설정
@@ -1435,6 +1473,10 @@ document.getElementById('cancel-daily-reflection').addEventListener('click', () 
     document.getElementById('daily-reflection-text').value = '';
     document.getElementById('satisfaction-score').value = '';
     document.getElementById('energy-level').value = '';
+
+    // UI 초기화
+    document.getElementById('daily-reflection-title').textContent = '📔 오늘 하루 회고';
+    document.getElementById('save-daily-reflection').textContent = '💾 회고 저장하기';
 });
 
 // X 버튼으로 닫기
@@ -1443,6 +1485,10 @@ document.getElementById('close-daily-reflection').addEventListener('click', () =
     document.getElementById('daily-reflection-text').value = '';
     document.getElementById('satisfaction-score').value = '';
     document.getElementById('energy-level').value = '';
+
+    // UI 초기화
+    document.getElementById('daily-reflection-title').textContent = '📔 오늘 하루 회고';
+    document.getElementById('save-daily-reflection').textContent = '💾 회고 저장하기';
 });
 
 // 일일 회고 저장
@@ -1482,7 +1528,15 @@ document.getElementById('save-daily-reflection').addEventListener('click', async
             document.getElementById('satisfaction-score').value = '';
             document.getElementById('energy-level').value = '';
 
-            alert('📔 오늘의 회고가 저장되었습니다!\n\n회고 히스토리에서 확인하실 수 있습니다.');
+            // UI 초기화
+            document.getElementById('daily-reflection-title').textContent = '📔 오늘 하루 회고';
+            document.getElementById('save-daily-reflection').textContent = '💾 회고 저장하기';
+
+            // 수정 모드에 따라 다른 메시지 표시
+            const message = window.isEditingReflection
+                ? '📔 오늘의 회고가 수정되었습니다!\n\n회고 히스토리에서 확인하실 수 있습니다.'
+                : '📔 오늘의 회고가 저장되었습니다!\n\n회고 히스토리에서 확인하실 수 있습니다.';
+            alert(message);
 
             // 회고 히스토리 페이지로 이동할지 묻기
             if (confirm('회고 히스토리를 확인하시겠습니까?')) {
