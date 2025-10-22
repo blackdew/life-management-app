@@ -17,8 +17,8 @@ class TestTodoWorkflow:
         page.click("#quick-add-btn")
         page.wait_for_load_state("networkidle")
 
-        # 할일이 UI에 표시되는지 확인
-        expect(page.get_by_text(todo_title)).to_be_visible()
+        # 할일이 UI에 표시되는지 확인 (첫 번째 요소 선택)
+        expect(page.get_by_text(todo_title).first).to_be_visible()
 
         # 할일 완료 (UI 상호작용 테스트)
         complete_btn = page.locator(".todo-item").last.locator("button").first
@@ -40,4 +40,4 @@ class TestTodoWorkflow:
         # 입력 필드가 클리어되고 할일이 표시되는지 확인
         input_value = page.input_value("#quick-todo-input")
         assert input_value == ""  # 입력 필드 클리어 확인
-        expect(page.get_by_text("UI 플로우 테스트")).to_be_visible()
+        expect(page.get_by_text("UI 플로우 테스트").first).to_be_visible()
