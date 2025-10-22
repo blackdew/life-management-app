@@ -18,13 +18,37 @@
 ## 🚀 **빠른 시작**
 
 ### **환경 설정**
-환경변수를 통해 애플리케이션의 동작을 설정할 수 있습니다:
+환경변수를 통해 애플리케이션의 동작을 설정할 수 있습니다.
 
+**Mac / Linux:**
 ```bash
 # .env 파일 생성 및 설정 (선택사항)
 echo "APP_ENV=dev" > .env
 echo "TIMEZONE=Asia/Seoul" >> .env
 echo "DEBUG=True" >> .env
+```
+
+**Windows (PowerShell):**
+```powershell
+# .env 파일 생성 및 설정 (선택사항)
+"APP_ENV=dev" | Out-File -FilePath .env -Encoding UTF8
+"TIMEZONE=Asia/Seoul" | Out-File -FilePath .env -Append -Encoding UTF8
+"DEBUG=True" | Out-File -FilePath .env -Append -Encoding UTF8
+```
+
+**Windows (CMD):**
+```cmd
+REM .env 파일 생성 및 설정 (선택사항)
+echo APP_ENV=dev > .env
+echo TIMEZONE=Asia/Seoul >> .env
+echo DEBUG=True >> .env
+```
+
+또는 `.env.example` 파일을 `.env`로 복사하여 사용하세요:
+```bash
+# 모든 OS 공통
+cp .env.example .env   # Mac/Linux
+copy .env.example .env  # Windows
 ```
 
 ### **설치**
@@ -38,28 +62,76 @@ python scripts/db.py --env dev init
 
 ### **실행**
 
-#### **개발 환경 실행 (권장)**
+#### **크로스 플랫폼 실행 (권장 ⭐)**
+모든 OS에서 동일하게 사용 가능한 Python 스크립트:
 ```bash
-# 간편 실행 스크립트 사용
-./scripts/run_dev.sh
+# 개발 환경 실행
+python run.py dev
 
-# 또는 수동 실행
-APP_ENV=dev uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# 메인 환경 실행
+python run.py main
 
 # 웹 브라우저에서 접속
-open http://localhost:8000
+# 개발: http://localhost:8000
+# 메인: http://localhost:8001
 ```
 
-#### **메인 환경 실행**
+#### **OS별 실행 스크립트**
+
+**Mac / Linux:**
 ```bash
-# 간편 실행 스크립트 사용
+# 개발 환경
+./scripts/run_dev.sh
+
+# 메인 환경
 ./scripts/run_main.sh
+```
 
-# 또는 수동 실행
+**Windows (PowerShell):**
+```powershell
+# 개발 환경
+.\scripts\run_dev.ps1
+
+# 메인 환경
+.\scripts\run_main.ps1
+```
+
+**Windows (CMD):**
+```cmd
+# 개발 환경
+scripts\run_dev.bat
+
+# 메인 환경
+scripts\run_main.bat
+```
+
+#### **수동 실행 (고급)**
+
+**Mac / Linux:**
+```bash
+# 개발 환경
+APP_ENV=dev uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 메인 환경
 APP_ENV=main uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
+```
 
-# 웹 브라우저에서 접속
-open http://localhost:8001
+**Windows (PowerShell):**
+```powershell
+# 개발 환경
+$env:APP_ENV="dev"; uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 메인 환경
+$env:APP_ENV="main"; uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
+```
+
+**Windows (CMD):**
+```cmd
+# 개발 환경
+set APP_ENV=dev && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 메인 환경
+set APP_ENV=main && uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
 
 #### **환경 구분**
@@ -284,7 +356,34 @@ python scripts/db.py --help
 
 ## 🧪 **테스트**
 
-### **권장 테스트 실행 방법**
+### **크로스 플랫폼 테스트 (권장 ⭐)**
+모든 OS에서 동일하게 사용:
+```bash
+# 통합 테스트 스크립트 실행
+python run.py test
+```
+
+### **OS별 테스트 스크립트**
+
+**Mac / Linux:**
+```bash
+# 분리 실행 스크립트
+./tests/test-services.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+# 분리 실행 스크립트
+.\tests\test-services.ps1
+```
+
+**Windows (CMD):**
+```cmd
+REM 분리 실행 스크립트
+tests\test-services.bat
+```
+
+### **수동 테스트 실행 (모든 OS 공통)**
 FastAPI TestClient와 pytest-asyncio 간 이벤트 루프 충돌을 방지하기 위해 분리 실행을 권장합니다:
 
 ```bash
@@ -401,11 +500,26 @@ MIT License - 자유롭게 사용, 수정, 배포 가능
 
 ## 🎯 **시작하기**
 
+### **모든 OS 공통 (권장 ⭐)**
 ```bash
 # 1. 의존성 설치
 uv sync
 
 # 2. 데이터베이스 초기화 (개발 환경)
+python scripts/db.py --env dev init
+
+# 3. 개발 서버 시작 (크로스 플랫폼)
+python run.py dev
+
+# 4. 브라우저에서 http://localhost:8000 접속
+```
+
+### **Mac / Linux**
+```bash
+# 1. 의존성 설치
+uv sync
+
+# 2. 데이터베이스 초기화
 python scripts/db.py --env dev init
 
 # 3. 개발 서버 시작
@@ -414,15 +528,32 @@ python scripts/db.py --env dev init
 # 4. 브라우저에서 http://localhost:8000 접속
 ```
 
-**메인 환경으로 시작하려면:**
-```bash
-# 메인 DB 초기화
-python scripts/db.py --env main init
+### **Windows (PowerShell)**
+```powershell
+# 1. 의존성 설치
+uv sync
 
-# 메인 서버 시작
-./scripts/run_main.sh
+# 2. 데이터베이스 초기화
+python scripts/db.py --env dev init
 
-# 브라우저에서 http://localhost:8001 접속
+# 3. 개발 서버 시작
+.\scripts\run_dev.ps1
+
+# 4. 브라우저에서 http://localhost:8000 접속
+```
+
+### **Windows (CMD)**
+```cmd
+REM 1. 의존성 설치
+uv sync
+
+REM 2. 데이터베이스 초기화
+python scripts/db.py --env dev init
+
+REM 3. 개발 서버 시작
+scripts\run_dev.bat
+
+REM 4. 브라우저에서 http://localhost:8000 접속
 ```
 
 ---
