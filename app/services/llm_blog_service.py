@@ -331,3 +331,105 @@ class LLMBlogService:
         reflection.blog_generated_at = datetime.now()
 
         db.commit()
+
+    @staticmethod
+    def update_blog_content(
+        reflection_id: int,
+        content: str,
+        db: Session
+    ) -> None:
+        """사용자가 직접 수정한 블로그 콘텐츠를 저장"""
+        reflection = db.query(DailyReflection).filter(
+            DailyReflection.id == reflection_id
+        ).first()
+
+        if not reflection:
+            raise ValueError(f"회고를 찾을 수 없습니다: ID {reflection_id}")
+
+        if not reflection.generated_blog_content:
+            raise ValueError("수정할 블로그 글이 없습니다. 먼저 생성해주세요.")
+
+        reflection.generated_blog_content = content
+        # 직접 수정 시 updated_at 자동 갱신
+        db.commit()
+
+    @staticmethod
+    def generate_refinement_prompt(
+        current_content: str,
+        refinement_request: str,
+        reflection: DailyReflection
+    ) -> str:
+        """블로그 글 개선을 위한 프롬프트 생성"""
+        prompt = f"""당신은 전문적인 블로거입니다. 아래 기존 블로그 글을 사용자의 요청에 따라 개선해주세요.
+
+## 기존 블로그 글
+{current_content}
+
+## 사용자 수정 요청
+{refinement_request}
+
+## 원본 회고 정보 (참고용)
+- 날짜: {reflection.reflection_date.strftime('%Y년 %m월 %d일')}
+- 만족도: {reflection.satisfaction_score}/5
+- 에너지: {reflection.energy_level}/5
+- 전체 완료율: {reflection.completion_rate:.1f}%
+
+## 수정 지침
+1. 기존 블로그 글의 구조와 톤을 유지하면서 사용자 요청을 반영
+2. 마크다운 형식 유지
+3. 사용자 요청이 명확하지 않으면, 전체적인 품질을 개선
+4. 적절한 이모지 사용
+5. 개인적이고 진솔한 톤앤매너 유지
+
+사용자 요청을 반영하여 개선된 블로그 글을 작성해주세요:"""
+
+        return prompt
+
+    @staticmethod
+    async def refine_blog_content(
+        reflection_id: int,
+        db: Session,
+        refinement_request: str,
+        provider: LLMProvider,
+        include_images: bool = True
+    ) -> Dict[str, Any]:
+        """기존 블로그 글을 개선"""
+        # 회고 및 기존 블로그 글 조회
+        reflection = db.query(DailyReflection).filter(
+            DailyReflection.id == reflection_id
+        ).first()
+
+        if not reflection:
+            raise ValueError(f"회고를 찾을 수 없습니다: ID {reflection_id}")
+
+        if not reflection.generated_blog_content:
+            raise ValueError("개선할 블로그 글이 없습니다. 먼저 생성해주세요.")
+
+        current_content = reflection.generated_blog_content
+
+        # 개선 프롬프트 생성
+        prompt = LLMBlogService.generate_refinement_prompt(
+            current_content=current_content,
+            refinement_request=refinement_request,
+            reflection=reflection
+        )
+
+        # LLM API 호출
+        refined_content = await LLMBlogService.call_llm_api(
+            provider=provider,
+            prompt=prompt
+        )
+
+        # DB에 저장
+        LLMBlogService.save_blog_content_to_db(
+            reflection_id=reflection_id,
+            content=refined_content,
+            prompt=prompt,
+            db=db
+        )
+
+        return {
+            "content": refined_content,
+            "is_cached": False,
+            "generated_at": datetime.now()
+        }

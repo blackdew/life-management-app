@@ -10,7 +10,13 @@ from app.core.database import get_db
 from app.models.daily_reflection import DailyReflection
 from app.services.daily_reflection_service import DailyReflectionService
 from app.services.llm_blog_service import LLMBlogService, LLMProvider
-from app.schemas.llm_blog import BlogGenerationRequest, BlogGenerationResponse, BlogContentResponse
+from app.schemas.llm_blog import (
+    BlogGenerationRequest,
+    BlogGenerationResponse,
+    BlogContentResponse,
+    BlogUpdateRequest,
+    BlogRefinementRequest
+)
 
 router = APIRouter(prefix="/api/reflections", tags=["일일 회고"])
 templates = Jinja2Templates(directory="app/templates")
@@ -260,6 +266,83 @@ async def get_blog_content(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"블로그 콘텐츠 조회 실패: {str(e)}")
+
+
+@router.patch("/{reflection_id}/blog-content", response_model=BlogContentResponse)
+async def update_blog_content(
+    reflection_id: int,
+    request: BlogUpdateRequest,
+    db: Session = Depends(get_db)
+):
+    """사용자가 직접 수정한 블로그 콘텐츠를 저장합니다"""
+    try:
+        # 블로그 콘텐츠 업데이트
+        LLMBlogService.update_blog_content(
+            reflection_id=reflection_id,
+            content=request.content,
+            db=db
+        )
+
+        # 업데이트된 내용 조회
+        cached_content = LLMBlogService.get_cached_blog_content(reflection_id, db)
+
+        return BlogContentResponse(
+            content=cached_content["content"],
+            generated_at=cached_content["generated_at"],
+            prompt=cached_content["prompt"]
+        )
+
+    except ValueError as e:
+        if "회고를 찾을 수 없습니다" in str(e):
+            raise HTTPException(status_code=404, detail="회고를 찾을 수 없습니다")
+        elif "수정할 블로그 글이 없습니다" in str(e):
+            raise HTTPException(status_code=404, detail="수정할 블로그 글이 없습니다")
+        else:
+            raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"블로그 콘텐츠 수정 실패: {str(e)}")
+
+
+@router.post("/{reflection_id}/refine-blog", response_model=BlogGenerationResponse)
+async def refine_blog_content(
+    reflection_id: int,
+    request: BlogRefinementRequest,
+    db: Session = Depends(get_db)
+):
+    """기존 블로그 글을 AI를 통해 개선합니다"""
+    try:
+        # LLM 제공업체 검증
+        provider = LLMProvider(request.provider)
+
+        # 블로그 글 개선
+        result = await LLMBlogService.refine_blog_content(
+            reflection_id=reflection_id,
+            db=db,
+            refinement_request=request.refinement_request,
+            provider=provider,
+            include_images=request.include_images
+        )
+
+        return BlogGenerationResponse(
+            content=result["content"],
+            is_cached=result["is_cached"],
+            generated_at=result["generated_at"]
+        )
+
+    except ValueError as e:
+        if "회고를 찾을 수 없습니다" in str(e):
+            raise HTTPException(status_code=404, detail="회고를 찾을 수 없습니다")
+        elif "개선할 블로그 글이 없습니다" in str(e):
+            raise HTTPException(status_code=404, detail="개선할 블로그 글이 없습니다. 먼저 생성해주세요.")
+        else:
+            raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        # OpenAI/Claude API 오류가 HTTP status code를 포함하고 있는지 확인
+        error_msg = str(e)
+        if "400:" in error_msg and "API 키가 유효하지 않습니다" in error_msg:
+            raise HTTPException(status_code=400, detail="API 키가 유효하지 않습니다")
+        else:
+            raise HTTPException(status_code=500, detail=f"블로그 글 개선 실패: {str(e)}")
 
 
 # 페이지 라우터들 - 레거시 /reflections 페이지 리다이렉트 추가

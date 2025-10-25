@@ -487,27 +487,173 @@
             <div class="p-6 overflow-y-auto max-h-[70vh]" id="blog-result-content">
                 <!-- 생성된 블로그 글이 여기에 표시됩니다 -->
             </div>
-            <div class="flex items-center justify-between p-6 border-t bg-gray-50">
-                <div class="flex items-center space-x-2 text-sm text-gray-600">
-                    <span id="cache-status"></span>
-                    <span id="generation-time"></span>
+            <div class="p-6 border-t bg-gray-50">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center space-x-2 text-sm text-gray-600">
+                        <span id="cache-status"></span>
+                        <span id="generation-time"></span>
+                    </div>
                 </div>
-                <div class="flex space-x-3">
-                    <button onclick="regenerateBlog()"
-                            class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-                        <i class="fas fa-redo mr-2"></i>
-                        재생성
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="showDirectEditModal()"
+                            class="px-4 py-2 text-purple-600 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100 text-sm">
+                        <i class="fas fa-edit mr-2"></i>
+                        직접 수정
+                    </button>
+                    <button onclick="showAIImproveModal()"
+                            class="px-4 py-2 text-green-600 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 text-sm">
+                        <i class="fas fa-magic mr-2"></i>
+                        AI로 개선
                     </button>
                     <button onclick="copyBlogToClipboard()"
-                            class="px-4 py-2 text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100">
+                            class="px-4 py-2 text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 text-sm">
                         <i class="fas fa-copy mr-2"></i>
                         복사
                     </button>
                     <button onclick="closeBlogResultModal()"
-                            class="px-4 py-2 text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
+                            class="px-4 py-2 text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 text-sm">
                         완료
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 블로그 직접 수정 모달 -->
+<div id="direct-edit-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div class="flex items-center justify-between p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">✏️ 블로그 글 직접 수정</h3>
+                <button onclick="closeDirectEditModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="direct-edit-form" onsubmit="saveDirectEdit(event)" class="p-6 overflow-y-auto max-h-[70vh]">
+                <!-- 편집 가능한 textarea -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-900 mb-2">블로그 글 내용</label>
+                    <textarea id="direct-edit-content"
+                              name="content"
+                              required
+                              rows="20"
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm"
+                              placeholder="블로그 글을 수정하세요..."></textarea>
+                    <div class="text-xs text-gray-500 mt-1">
+                        <span id="char-count">0</span> 글자
+                    </div>
+                </div>
+
+                <!-- 버튼 -->
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t">
+                    <button type="button" onclick="closeDirectEditModal()"
+                            class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                        취소
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 text-white bg-purple-600 border border-transparent rounded-md hover:bg-purple-700">
+                        <i class="fas fa-save mr-2"></i>
+                        저장
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- AI 블로그 개선 모달 (수정 요청 + 재생성 통합) -->
+<div id="ai-improve-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div class="flex items-center justify-between p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">🤖 AI로 블로그 글 개선</h3>
+                <button onclick="closeAIImproveModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[70vh]">
+                <!-- 현재 블로그 글 미리보기 (접을 수 있음) -->
+                <div class="mb-6">
+                    <button type="button" onclick="toggleCurrentBlogPreview()"
+                            class="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <span class="font-medium text-gray-900">현재 블로그 글 보기</span>
+                        <i id="preview-arrow" class="fas fa-chevron-down text-gray-500"></i>
+                    </button>
+                    <div id="current-blog-preview" class="hidden mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200 max-h-60 overflow-y-auto">
+                        <div class="text-sm text-gray-700 whitespace-pre-wrap" id="current-blog-preview-content"></div>
+                    </div>
+                </div>
+
+                <form id="ai-improve-form" onsubmit="submitAIImprove(event)">
+                    <!-- 개선 방식 선택 -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-900 mb-3">개선 방식</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                <input type="radio" name="improve_type" value="refine" checked
+                                       onchange="toggleImproveType()"
+                                       class="mr-3 text-green-600 focus:ring-green-500">
+                                <div>
+                                    <div class="font-medium text-gray-900">기존 글 수정 요청</div>
+                                    <div class="text-sm text-gray-500">현재 글을 유지하면서 부분적으로 개선</div>
+                                </div>
+                            </label>
+                            <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                <input type="radio" name="improve_type" value="regenerate"
+                                       onchange="toggleImproveType()"
+                                       class="mr-3 text-green-600 focus:ring-green-500">
+                                <div>
+                                    <div class="font-medium text-gray-900">완전히 재생성</div>
+                                    <div class="text-sm text-gray-500">처음부터 새로 작성</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 수정 요청 / 추가 프롬프트 입력 -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-900 mb-2" id="prompt-label">수정 요청사항</label>
+                        <textarea name="user_prompt"
+                                  id="user-prompt-textarea"
+                                  required
+                                  rows="5"
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                  placeholder="예: 더 유머러스하게 작성해주세요&#10;예: 완료한 일에 대한 설명을 더 자세히 써주세요&#10;예: 전체적으로 간결하게 요약해주세요"></textarea>
+                    </div>
+
+                    <!-- AI 모델 선택 -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">AI 모델 선택</label>
+                        <select name="provider" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                            <option value="openai">OpenAI GPT-4o</option>
+                            <option value="claude">Claude 3.5 Sonnet</option>
+                        </select>
+                    </div>
+
+                    <!-- 이미지 포함 여부 -->
+                    <div class="mb-6">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="include_images" checked
+                                   class="mr-2 rounded border-gray-300 text-green-600 focus:ring-green-500">
+                            <span class="text-sm text-gray-700">할일 완료 이미지 포함</span>
+                        </label>
+                    </div>
+
+                    <!-- 버튼 -->
+                    <div class="flex space-x-3">
+                        <button type="button" onclick="closeAIImproveModal()"
+                                class="flex-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                            취소
+                        </button>
+                        <button type="submit"
+                                class="flex-1 px-4 py-2 text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700">
+                            <i class="fas fa-magic mr-2"></i>
+                            <span id="submit-button-text">개선하기</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -1112,17 +1258,6 @@
         document.getElementById('blog-result-modal').classList.add('hidden');
     }
 
-    // 블로그 글 재생성
-    function regenerateBlog() {
-        closeBlogResultModal();
-        document.getElementById('llm-blog-modal').classList.remove('hidden');
-        // 재생성임을 표시하기 위해 제목 변경
-        document.querySelector('#llm-blog-modal h3').textContent = '🔄 AI 블로그 글 재생성';
-
-        // 재생성 모드 표시
-        document.getElementById('llm-blog-form').setAttribute('data-regenerate', 'true');
-    }
-
     // 블로그 글 클립보드 복사
     async function copyBlogToClipboard() {
         try {
@@ -1247,6 +1382,10 @@
             document.getElementById('date-picker').classList.add('hidden');
             document.getElementById('reflection-detail-modal').classList.add('hidden');
             document.getElementById('reflection-write-modal').classList.add('hidden');
+            document.getElementById('llm-blog-modal').classList.add('hidden');
+            document.getElementById('blog-result-modal').classList.add('hidden');
+            document.getElementById('direct-edit-modal').classList.add('hidden');
+            document.getElementById('ai-improve-modal').classList.add('hidden');
         }
     });
 
@@ -1394,12 +1533,27 @@
 
     // 키보드 네비게이션 (화살표 키)
     document.addEventListener('keydown', function(event) {
-        // 입력 필드에 포커스가 있을 때는 무시
-        if (event.target.tagName === 'INPUT') return;
+        // 입력 필드에 포커스가 있을 때는 무시 (INPUT, TEXTAREA)
+        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
 
-        // 이미지 모달이 열려있을 때는 무시
+        // 모달이 열려있을 때는 무시
         const imageModal = document.getElementById('image-modal');
-        if (!imageModal.classList.contains('hidden')) return;
+        const reflectionDetailModal = document.getElementById('reflection-detail-modal');
+        const reflectionWriteModal = document.getElementById('reflection-write-modal');
+        const llmBlogModal = document.getElementById('llm-blog-modal');
+        const blogResultModal = document.getElementById('blog-result-modal');
+        const directEditModal = document.getElementById('direct-edit-modal');
+        const aiImproveModal = document.getElementById('ai-improve-modal');
+
+        if (!imageModal.classList.contains('hidden') ||
+            !reflectionDetailModal.classList.contains('hidden') ||
+            !reflectionWriteModal.classList.contains('hidden') ||
+            !llmBlogModal.classList.contains('hidden') ||
+            !blogResultModal.classList.contains('hidden') ||
+            !directEditModal.classList.contains('hidden') ||
+            !aiImproveModal.classList.contains('hidden')) {
+            return;
+        }
 
         if (event.key === 'ArrowLeft') {
             // 이전 주로 이동
@@ -1409,6 +1563,265 @@
             window.location.href = `/reflection-history?week_start={{ next_monday.strftime('%Y-%m-%d') }}`;
         }
     });
+
+    // ============================================
+    // 블로그 직접 수정 관련 함수
+    // ============================================
+
+    // 직접 수정 모달 열기
+    function showDirectEditModal() {
+        if (!currentBlogContent) {
+            alert('수정할 블로그 글이 없습니다.');
+            return;
+        }
+
+        const modal = document.getElementById('direct-edit-modal');
+        const textarea = document.getElementById('direct-edit-content');
+
+        // 현재 블로그 글 내용을 textarea에 설정
+        textarea.value = currentBlogContent;
+
+        // 글자 수 업데이트
+        updateCharCount();
+
+        // 모달 표시
+        modal.classList.remove('hidden');
+
+        // textarea에 포커스
+        setTimeout(() => textarea.focus(), 100);
+    }
+
+    // 직접 수정 모달 닫기
+    function closeDirectEditModal() {
+        const modal = document.getElementById('direct-edit-modal');
+        modal.classList.add('hidden');
+    }
+
+    // 글자 수 업데이트
+    function updateCharCount() {
+        const textarea = document.getElementById('direct-edit-content');
+        const charCount = document.getElementById('char-count');
+        charCount.textContent = textarea.value.length;
+    }
+
+    // textarea 변경 시 글자 수 자동 업데이트
+    document.addEventListener('DOMContentLoaded', function() {
+        const textarea = document.getElementById('direct-edit-content');
+        if (textarea) {
+            textarea.addEventListener('input', updateCharCount);
+        }
+    });
+
+    // 직접 수정 저장
+    async function saveDirectEdit(event) {
+        event.preventDefault();
+
+        if (!currentModalReflectionId) {
+            alert('회고 정보를 불러올 수 없습니다.');
+            return;
+        }
+
+        const form = event.target;
+        const formData = new FormData(form);
+        const content = formData.get('content');
+
+        // 로딩 표시
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalText = submitButton.innerHTML;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>저장 중...';
+        submitButton.disabled = true;
+
+        try {
+            const response = await fetch(`/api/reflections/${currentModalReflectionId}/blog-content`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: content })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || '블로그 글 수정에 실패했습니다.');
+            }
+
+            const data = await response.json();
+
+            // 성공 시 모달 닫고 결과 표시
+            closeDirectEditModal();
+            showBlogResult(data.content, false, data.generated_at);
+
+            // 글로벌 변수 업데이트
+            currentBlogContent = data.content;
+
+            alert('✅ 블로그 글이 성공적으로 수정되었습니다!');
+
+        } catch (error) {
+            console.error('블로그 글 수정 실패:', error);
+            alert(`❌ 블로그 글 수정 실패: ${error.message}`);
+        } finally {
+            // 로딩 상태 해제
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+        }
+    }
+
+    // ============================================
+    // AI 블로그 개선 관련 함수 (수정 요청 + 재생성 통합)
+    // ============================================
+
+    // AI 개선 모달 열기
+    function showAIImproveModal() {
+        const modal = document.getElementById('ai-improve-modal');
+        const previewSection = modal.querySelector('.mb-6'); // 현재 블로그 글 미리보기 섹션
+        const previewContent = document.getElementById('current-blog-preview-content');
+        const refineRadio = modal.querySelector('input[name="improve_type"][value="refine"]');
+        const regenerateRadio = modal.querySelector('input[name="improve_type"][value="regenerate"]');
+        const refineLabel = refineRadio.closest('label');
+        const form = document.getElementById('ai-improve-form');
+
+        // 폼 초기화
+        form.reset();
+
+        if (currentBlogContent) {
+            // 블로그 글이 있는 경우: 모든 옵션 표시, "기존 글 수정" 기본 선택
+            previewSection.classList.remove('hidden');
+            previewContent.textContent = currentBlogContent;
+            refineLabel.classList.remove('hidden');
+            refineRadio.checked = true;
+            toggleImproveType(); // 라벨과 placeholder 업데이트
+        } else {
+            // 블로그 글이 없는 경우: "재생성"만 표시 및 자동 선택
+            previewSection.classList.add('hidden');
+            refineLabel.classList.add('hidden');
+            regenerateRadio.checked = true;
+            toggleImproveType(); // 라벨과 placeholder 업데이트
+        }
+
+        // 모달 표시
+        modal.classList.remove('hidden');
+    }
+
+    // AI 개선 모달 닫기
+    function closeAIImproveModal() {
+        const modal = document.getElementById('ai-improve-modal');
+        modal.classList.add('hidden');
+
+        // 폼 초기화
+        const form = document.getElementById('ai-improve-form');
+        form.reset();
+
+        // 미리보기 숨기기
+        const preview = document.getElementById('current-blog-preview');
+        const arrow = document.getElementById('preview-arrow');
+        preview.classList.add('hidden');
+        arrow.classList.remove('fa-chevron-up');
+        arrow.classList.add('fa-chevron-down');
+    }
+
+    // 현재 블로그 글 미리보기 토글
+    function toggleCurrentBlogPreview() {
+        const preview = document.getElementById('current-blog-preview');
+        const arrow = document.getElementById('preview-arrow');
+
+        preview.classList.toggle('hidden');
+
+        if (preview.classList.contains('hidden')) {
+            arrow.classList.remove('fa-chevron-up');
+            arrow.classList.add('fa-chevron-down');
+        } else {
+            arrow.classList.remove('fa-chevron-down');
+            arrow.classList.add('fa-chevron-up');
+        }
+    }
+
+    // 개선 방식 토글 (라디오 버튼 변경 시)
+    function toggleImproveType() {
+        const selectedType = document.querySelector('input[name="improve_type"]:checked').value;
+        const label = document.getElementById('prompt-label');
+        const textarea = document.getElementById('user-prompt-textarea');
+
+        if (selectedType === 'refine') {
+            label.textContent = '수정 요청사항';
+            textarea.placeholder = '예: 더 유머러스하게 작성해주세요\n예: 완료한 일에 대한 설명을 더 자세히 써주세요\n예: 전체적으로 간결하게 요약해주세요';
+            textarea.required = true;
+        } else {
+            label.textContent = '추가 프롬프트 (선택사항)';
+            textarea.placeholder = '예: 이모지를 많이 사용해주세요\n예: 성장과 배움에 초점을 맞춰주세요';
+            textarea.required = false;
+        }
+    }
+
+    // AI 개선 요청 제출
+    async function submitAIImprove(event) {
+        event.preventDefault();
+
+        if (!currentModalReflectionId) {
+            alert('회고 정보를 불러올 수 없습니다.');
+            return;
+        }
+
+        const form = event.target;
+        const formData = new FormData(form);
+        const improveType = formData.get('improve_type');
+
+        // 로딩 표시
+        const submitButton = form.querySelector('button[type="submit"]');
+        const buttonText = document.getElementById('submit-button-text');
+        const originalText = buttonText.textContent;
+        buttonText.textContent = '생성 중...';
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i><span id="submit-button-text">생성 중...</span>';
+
+        try {
+            let endpoint, requestData;
+
+            if (improveType === 'refine') {
+                // 수정 요청
+                endpoint = `/api/reflections/${currentModalReflectionId}/refine-blog`;
+                requestData = {
+                    refinement_request: formData.get('user_prompt'),
+                    provider: formData.get('provider'),
+                    include_images: formData.get('include_images') ? true : false
+                };
+            } else {
+                // 재생성
+                endpoint = `/api/reflections/${currentModalReflectionId}/regenerate-blog`;
+                requestData = {
+                    provider: formData.get('provider'),
+                    include_images: formData.get('include_images') ? true : false,
+                    additional_prompt: formData.get('user_prompt') || null
+                };
+            }
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'AI 블로그 개선에 실패했습니다.');
+            }
+
+            const data = await response.json();
+
+            // 성공 시 결과 모달 표시
+            closeAIImproveModal();
+            showBlogResult(data.content, data.is_cached, data.generated_at);
+
+        } catch (error) {
+            console.error('AI 블로그 개선 실패:', error);
+            alert(`❌ AI 블로그 개선 실패: ${error.message}`);
+        } finally {
+            // 로딩 상태 해제
+            submitButton.innerHTML = `<i class="fas fa-magic mr-2"></i><span id="submit-button-text">${originalText}</span>`;
+            submitButton.disabled = false;
+        }
+    }
 </script>
 
 </body>

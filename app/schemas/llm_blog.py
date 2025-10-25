@@ -25,3 +25,15 @@ class BlogContentResponse(BaseModel):
     content: str = Field(..., description="저장된 블로그 글 내용")
     generated_at: Optional[datetime] = Field(None, description="생성 시간")
     prompt: Optional[str] = Field(None, description="사용된 프롬프트")
+
+
+class BlogUpdateRequest(BaseModel):
+    """블로그 글 직접 수정 요청 스키마"""
+    content: str = Field(..., description="수정된 블로그 글 내용")
+
+
+class BlogRefinementRequest(BaseModel):
+    """블로그 글 AI 개선 요청 스키마"""
+    refinement_request: str = Field(..., description="수정 요청 내용")
+    provider: str = Field(..., description="LLM 제공업체 (openai, claude)")
+    include_images: bool = Field(default=True, description="이미지 포함 여부")

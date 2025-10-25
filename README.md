@@ -14,6 +14,10 @@
 - **🎯 여정 연결**: 목표 지향적 할 일 관리
 - **📊 실시간 완료 현황**: 개수 기반 피드백과 동기부여
 - **🤖 AI 블로그 생성**: LLM을 활용한 자동 블로그 포스트 생성
+  - OpenAI GPT-4o 또는 Claude 3.5 Sonnet 선택 가능
+  - 회고 데이터 기반 자동 생성
+  - **직접 수정**: 생성된 글을 자유롭게 편집
+  - **AI 개선**: 기존 글을 AI가 수정하거나 완전히 재생성
 
 ## 🚀 **빠른 시작**
 
@@ -162,6 +166,19 @@ curl http://localhost:8000/api/daily/journeys
 3. **진행 확인**: 실시간 완료 현황과 할일 개수 확인
 4. **완료 & 회고**: 할 일 완료 시 배움과 성과 기록
 5. **미루기**: 필요시 다른 날짜로 일정 조정
+6. **블로그 작성**: 하루를 마무리하며 AI로 블로그 글 생성
+
+### **AI 블로그 워크플로우**
+1. **회고 작성**: 먼저 일일 회고를 작성합니다
+2. **블로그 생성**:
+   - "AI 블로그 생성" 버튼 클릭
+   - AI 모델 선택 (OpenAI GPT-4o 또는 Claude 3.5 Sonnet)
+   - 추가 요청사항 입력 (선택사항)
+   - 생성 버튼 클릭하여 자동 생성
+3. **편집**:
+   - **직접 수정**: 생성된 글을 텍스트 에디터로 직접 편집
+   - **AI로 개선**: AI에게 수정 요청 또는 완전히 재생성
+4. **활용**: 복사 버튼으로 블로그 플랫폼에 붙여넣기
 
 ### **주요 UI 요소**
 - **⚙️ 버튼**: 상세 입력 폼 토글
@@ -281,6 +298,46 @@ DELETE /api/daily/memos/{id}
 # 메모 일괄 삭제
 DELETE /api/daily/memos/bulk
 Body: memo_ids=[1,2,3]
+```
+
+### **AI 블로그 관리**
+```bash
+# 블로그 글 생성
+POST /api/reflections/{reflection_id}/generate-blog
+Content-Type: application/json
+Body: {
+  "provider": "openai",  # 또는 "claude"
+  "include_images": true,
+  "additional_prompt": "더 유머러스하게 작성해주세요"  # 선택사항
+}
+
+# 블로그 글 조회
+GET /api/reflections/{reflection_id}/blog-content
+
+# 블로그 글 직접 수정
+PATCH /api/reflections/{reflection_id}/blog-content
+Content-Type: application/json
+Body: {
+  "content": "수정된 블로그 글 내용"
+}
+
+# AI로 블로그 글 개선
+POST /api/reflections/{reflection_id}/refine-blog
+Content-Type: application/json
+Body: {
+  "refinement_request": "더 간결하게 요약해주세요",
+  "provider": "openai",
+  "include_images": true
+}
+
+# 블로그 글 재생성 (강제)
+POST /api/reflections/{reflection_id}/regenerate-blog
+Content-Type: application/json
+Body: {
+  "provider": "claude",
+  "include_images": true,
+  "additional_prompt": "전문적인 톤으로 작성해주세요"
+}
 ```
 
 ## 🎨 **디자인 철학**
@@ -443,6 +500,8 @@ uv run pytest tests/models/test_daily_reflection_llm.py -v
 | `DEBUG` | `True` | 디버그 모드 활성화 |
 | `DATABASE_URL` | *(환경별 자동)* | 데이터베이스 연결 URL (명시적 지정 가능) |
 | `APP_NAME` | `"Daily Flow"` | 애플리케이션 이름 |
+| `OPENAI_API_KEY` | - | OpenAI GPT-4o 사용을 위한 API 키 (선택사항) |
+| `CLAUDE_API_KEY` | - | Claude 3.5 Sonnet 사용을 위한 API 키 (선택사항) |
 
 **참고**: `DATABASE_URL`을 명시적으로 지정하지 않으면 `APP_ENV`에 따라 자동 설정됩니다:
 - `dev` → `sqlite:///./data/app_dev.db`
@@ -465,11 +524,19 @@ TIMEZONE=Asia/Tokyo
 
 ### **.env 파일 예시**
 ```bash
+# 기본 설정
+APP_ENV=dev
 TIMEZONE=Asia/Seoul
 DEBUG=True
 DATABASE_URL=sqlite:///./data/app.db
 APP_NAME="나의 일상 관리"
+
+# AI 블로그 기능 (선택사항)
+OPENAI_API_KEY=sk-your-openai-api-key
+CLAUDE_API_KEY=sk-ant-your-claude-api-key
 ```
+
+**참고**: AI 블로그 기능을 사용하지 않는다면 API 키 설정은 생략 가능합니다.
 
 ## 🤝 **기여하기**
 
